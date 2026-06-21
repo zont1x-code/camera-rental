@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>预约成功</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="toast" class="toast" style="display:none;"></div>
+
+  <div class="success-page">
+    <div class="success-card">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h1>预约提交成功</h1>
+      <p class="sub">您的预约已提交，请等待管理员确认。</p>
+      <p class="hint">可在「我的预约」页面查看订单状态</p>
+      <div class="success-actions">
+        <a href="/index.html" class="btn btn-primary">返回首页</a>
+        <a href="/my-bookings.html" class="btn btn-outline">查看我的预约</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>initApp('index');</script>
+</body>
+</html>

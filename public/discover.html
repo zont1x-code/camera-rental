@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="发现精选相机实拍、社区分享作品与最新公告">
+  <title>发现 - Camera Rental</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="toast" class="toast" style="display:none;"></div>
+
+  <!-- 手机端子导航 -->
+  <div class="discover-subnav" id="discoverSubnav">
+    <button class="subnav-btn active" onclick="scrollToSection('official',this)">官方精选</button>
+    <button class="subnav-btn" onclick="scrollToSection('community',this)">社区分享</button>
+    <button class="subnav-btn" onclick="scrollToSection('announcements',this)">公告栏</button>
+  </div>
+
+  <div class="container">
+    <div class="discover-layout">
+
+      <nav class="discover-sidebar">
+        <button class="sidebar-item active" data-section="official">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          官方精选
+        </button>
+        <button class="sidebar-item" data-section="community">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          社区分享
+        </button>
+        <button class="sidebar-item" data-section="announcements">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          公告
+        </button>
+      </nav>
+
+      <div class="discover-main">
+
+        <div id="section-official" class="discover-section active" data-section-name="official">
+          <div class="card">
+            <h2>精选实拍</h2>
+            <div class="gallery" id="featuredGallery">
+              <div class="skeleton" style="height:160px;border-radius:var(--radius-sm);"></div>
+              <div class="skeleton" style="height:160px;border-radius:var(--radius-sm);"></div>
+              <div class="skeleton" style="height:160px;border-radius:var(--radius-sm);"></div>
+              <div class="skeleton" style="height:160px;border-radius:var(--radius-sm);"></div>
+            </div>
+          </div>
+
+          <div class="card" id="cameraDetails">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+          </div>
+
+          <div class="card">
+            <h2>租赁流程</h2>
+            <div class="steps-row">
+              <div class="step-item"><div class="step-circle">1</div><div class="step-label">选择机型</div></div>
+              <div class="step-item"><div class="step-circle">2</div><div class="step-label">在线预约</div></div>
+              <div class="step-item"><div class="step-circle">3</div><div class="step-label">到店取机</div></div>
+              <div class="step-item"><div class="step-circle">4</div><div class="step-label">按时归还</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="section-community" class="discover-section" data-section-name="community">
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+              <h2 style="margin-bottom:0;">社区分享</h2>
+              <button class="btn btn-primary btn-sm" onclick="showShareModal()">我要分享</button>
+            </div>
+            <div id="postsGrid" class="posts-grid">
+              <div class="skeleton skeleton-img"></div>
+              <div class="skeleton skeleton-img"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="section-announcements" class="discover-section" data-section-name="announcements">
+          <div class="card">
+            <h2>公告栏</h2>
+            <ul id="announcementList" class="announcement-list">
+              <li><div class="skeleton skeleton-text" style="width:80%;"></div></li>
+              <li><div class="skeleton skeleton-text" style="width:65%;"></div></li>
+              <li><div class="skeleton skeleton-text" style="width:70%;"></div></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Modal -->
+  <div id="shareModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h3>发布分享</h3>
+      <div class="form-group">
+        <label>标题<span class="required">*</span></label>
+        <input type="text" id="shareTitle" placeholder="给你的分享起个标题" required maxlength="50">
+        <div class="char-count"><span id="shareTitleCount">0</span>/50</div>
+        <div class="field-error">请填写标题</div>
+      </div>
+      <div class="form-group">
+        <label for="sharePhoto">照片<span class="required">*</span></label>
+        <input type="file" id="sharePhoto" accept="image/*" onchange="handleSharePhoto(event)">
+        <div id="sharePhotoPreview" style="display:none;margin-top:8px;">
+          <img id="sharePhotoPreviewImg" src="" alt="预览" style="max-width:100%;max-height:200px;border-radius:var(--radius-sm);object-fit:cover;">
+        </div>
+        <div class="field-error">请选择一张照片</div>
+      </div>
+      <div class="form-group">
+        <label>描述<span class="required">*</span></label>
+        <textarea id="shareDescription" rows="3" placeholder="说说你的拍摄体验..." required maxlength="500"></textarea>
+        <div class="char-count"><span id="shareDescCount">0</span>/500</div>
+        <div class="field-error">请填写描述</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-primary" onclick="submitShare()">提交</button>
+        <button class="btn btn-outline" onclick="hideShareModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    var sidebarItems=document.querySelectorAll('.discover-sidebar .sidebar-item');
+    var sections=document.querySelectorAll('.discover-section');
+    sidebarItems.forEach(function(item){item.addEventListener('click',function(){var sid=this.dataset.section;sidebarItems.forEach(function(i){i.classList.remove('active')});sections.forEach(function(s){s.classList.remove('active')});this.classList.add('active');document.getElementById('section-'+sid).classList.add('active');if(sid==='community')loadPosts();if(sid==='announcements')loadAnnouncements()})});
+
+    async function loadCameraDetails(){
+      var cameras=await api('/api/cameras');
+      var html='<h2>可租机型</h2>';
+      cameras.forEach(function(c){html+='<div class="camera-detail-item"><img src="'+c.image+'" alt="'+esc(c.model)+'" loading="lazy"><div class="detail-info"><h4>'+esc(c.model)+'</h4><p>'+(c.detail||c.advantage)+'</p><p style="color:var(--accent);font-weight:500;margin-top:2px;">单日 ¥'+c.price1day+' · 两日 ¥'+c.price2day+' · 三天起 ¥'+c.price3dayPerDay+'/天</p></div></div>'});
+      document.getElementById('cameraDetails').innerHTML=html;
+    }
+
+    async function loadPosts(){
+      try{var posts=await api('/api/posts?status=approved');var grid=document.getElementById('postsGrid');if(posts.length===0){grid.innerHTML='<div class="empty-state"><p style="color:var(--muted);">暂无分享，快来第一个分享吧！</p></div>';return}
+        grid.innerHTML=posts.map(function(p){var img=p.image?'<img src="'+p.image+'" alt="'+esc(p.title||'')+'" loading="lazy">':'<div style="height:200px;background:var(--bg-dark);display:flex;align-items:center;justify-content:center;color:var(--meta);">暂无图片</div>';return '<div class="post-card">'+img+'<div class="post-body"><p><strong>'+esc(p.title||'无标题')+'</strong></p><p style="font-size:12px;color:var(--muted);">'+esc(p.description)+'</p><div class="post-meta">'+p.phoneMasked+' · '+formatDate(p.createdAt)+'</div></div></div>'}).join('')}
+      catch(e){document.getElementById('postsGrid').innerHTML='<div class="empty-state"><p style="color:var(--muted);">加载失败</p></div>'}
+    }
+
+    async function loadAnnouncements(){
+      try{var list=await api('/api/announcements');var ul=document.getElementById('announcementList');if(list.length===0){ul.innerHTML='<li style="color:var(--muted);">暂无公告</li>';return}
+        ul.innerHTML=list.map(function(a){return '<li><span class="anno-date">'+formatDate(a.createdAt)+'</span>'+esc(a.content)+'</li>'}).join('')}
+      catch(e){document.getElementById('announcementList').innerHTML='<li style="color:var(--muted);">加载失败</li>'}
+    }
+
+    var sharePhotoFile=null;
+    function handleSharePhoto(e){var file=e.target.files[0];if(!file)return;sharePhotoFile=file;var reader=new FileReader();reader.onload=function(ev){document.getElementById('sharePhotoPreviewImg').src=ev.target.result;document.getElementById('sharePhotoPreview').style.display=''};reader.readAsDataURL(file)}
+    function showShareModal(){if(!requireLogin())returnsharePhotoFile=null;document.getElementById('sharePhoto').value='';document.getElementById('sharePhotoPreview').style.display='none';document.getElementById('shareTitle').value='';document.getElementById('shareDescription').value='';document.getElementById('shareModal').style.display='flex'}
+    function hideShareModal(){document.getElementById('shareModal').style.display='none'}
+    document.addEventListener('click',function(e){if(e.target.id==='shareModal')hideShareModal()});
+    async function submitShare(){var title=document.getElementById('shareTitle').value.trim();var desc=document.getElementById('shareDescription').value.trim();if(!title){showToast('请填写标题','error');return}if(!sharePhotoFile){showToast('请选择照片','error');return}if(!desc){showToast('请填写描述','error');return}
+      try{var fd=new FormData();fd.append('photo',sharePhotoFile);fd.append('phone',currentUser.phone);fd.append('title',title);fd.append('description',desc);var res=await fetch('/api/posts',{method:'POST',body:fd});var data=await res.json();if(!res.ok)throw new Error(data.error||'提交失败');showToast('分享已提交，等待审核','success');hideShareModal()}catch(e){showToast(e.message,'error')}}
+
+    function onLoginSuccess(){}
+    // 手机端子导航：点击切换板块
+    function scrollToSection(name,btn){
+      document.querySelectorAll('.discover-section').forEach(function(s){s.classList.remove('active')});
+      var el=document.querySelector('.discover-section[data-section-name="'+name+'"]');
+      if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'start'})}
+      document.querySelectorAll('.subnav-btn').forEach(function(b){b.classList.remove('active')});
+      if(btn)btn.classList.add('active');
+      if(name==='community')loadPosts();
+      if(name==='announcements')loadAnnouncements();
+    }
+    // 加载精选图
+    async function loadFeaturedGallery() {
+      try { var d=await api('/api/featured'); var imgs=d.gallery_images||[]; var g=document.getElementById('featuredGallery');
+        if(imgs.length){ g.innerHTML=imgs.map(function(url){return '<img src="'+url+'" alt="精选" loading="lazy">'}).join('') }
+      } catch(e) {}
+    }
+    loadFeaturedGallery();
+    initApp('discover');loadCameraDetails();loadPosts();
+  </script>
+</body>
+</html>

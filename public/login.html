@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>登录注册</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="toast" class="toast" style="display:none;"></div>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg-white);border-radius:var(--radius-xl);padding:40px 32px;max-width:400px;width:100%;box-shadow:var(--shadow-lg);border:1px solid var(--border-card);">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-family:var(--font-display);font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.01em;">Camera<span style="color:var(--accent);">Rental</span></div>
+    </div>
+
+    <!-- Tab Switcher -->
+    <div style="display:flex;margin-bottom:24px;border-bottom:1px solid var(--border-card);">
+      <button class="auth-tab active" onclick="switchAuth('login')" id="tabLogin">登录</button>
+      <button class="auth-tab" onclick="switchAuth('register')" id="tabRegister">注册</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="formLogin">
+      <div class="form-group">
+        <label>用户名 / 手机号</label>
+        <input type="text" id="loginAccount" placeholder="请输入用户名或手机号">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="loginPassword" placeholder="请输入密码">
+      </div>
+      <div style="text-align:right;margin-bottom:16px;">
+        <a href="javascript:void(0)" onclick="showForget()" style="font-size:12px;color:var(--accent);">忘记密码？</a>
+      </div>
+      <button class="submit-btn" onclick="doLogin()">登 录</button>
+      <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--muted);">
+        浏览网站无需登录，预约或发帖时才需要
+      </p>
+    </div>
+
+    <!-- Register Form -->
+    <div id="formRegister" style="display:none;">
+      <div class="form-group">
+        <label>用户名<span class="required">*</span></label>
+        <input type="text" id="regUsername" placeholder="建议使用微信号" maxlength="30">
+        <div style="font-size:10px;color:var(--meta);margin-top:2px;">建议填写微信号，方便客服联系你</div>
+      </div>
+      <div class="form-group">
+        <label>密码<span class="required">*</span></label>
+        <input type="password" id="regPassword" placeholder="至少6位" maxlength="30">
+      </div>
+      <div class="form-group">
+        <label>手机号<span class="required">*</span></label>
+        <input type="tel" id="regPhone" placeholder="请输入11位手机号" maxlength="11">
+      </div>
+      <div class="form-group">
+        <label>注册码<span class="required">*</span></label>
+        <input type="text" id="regCode" placeholder="请输入8位注册码" maxlength="12" autocomplete="off">
+        <div style="font-size:10px;color:var(--meta);margin-top:2px;">请联系管理员获取注册码</div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;">
+        <input type="checkbox" id="regPrivacy" style="margin-top:2px;">
+        <label for="regPrivacy" style="font-size:12px;color:var(--muted);line-height:1.4;">我已阅读并同意<a href="javascript:void(0)" onclick="showPrivacy()" style="color:var(--accent);">隐私协议</a></label>
+      </div>
+      <button class="submit-btn" onclick="doRegister()">注 册</button>
+    </div>
+  </div>
+</div>
+
+<!-- 忘记密码弹窗 -->
+<div id="forgetModal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="text-align:center;">
+    <h3>忘记密码</h3>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">请联系客服重置密码</p>
+    <div style="background:var(--fill);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;">
+      <p style="font-size:16px;font-weight:600;color:var(--accent);">微信号：H15982724652</p>
+      <p style="font-size:12px;color:var(--meta);margin-top:4px;">添加时请备注"CameraRental重置密码"</p>
+    </div>
+    <button class="btn btn-outline" onclick="hideForget()">关闭</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+  function showToast(msg,type){var t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.className='toast '+type;t.style.display='block';setTimeout(function(){t.style.display='none'},3000)}
+
+  function switchAuth(tab){
+    document.getElementById('formLogin').style.display=tab==='login'?'block':'none';
+    document.getElementById('formRegister').style.display=tab==='register'?'block':'none';
+    document.getElementById('tabLogin').classList.toggle('active',tab==='login');
+    document.getElementById('tabRegister').classList.toggle('active',tab==='register');
+  }
+
+  function showForget(){document.getElementById('forgetModal').style.display='flex'}
+  function hideForget(){document.getElementById('forgetModal').style.display='none'}
+  document.addEventListener('click',function(e){if(e.target.id==='forgetModal')hideForget()});
+
+  async function showPrivacy(){
+    try{var data=await api('/api/privacy');alert(data.content)}catch(e){}
+  }
+
+  // 注册
+  async function doRegister(){
+    var username=document.getElementById('regUsername').value.trim();
+    var password=document.getElementById('regPassword').value;
+    var phone=document.getElementById('regPhone').value.trim();
+    var regCode=document.getElementById('regCode').value.trim();
+    if(!username||!password||!phone||!regCode){showToast('请填写完整信息','error');return}
+    if(username.length<2){showToast('用户名至少2个字符','error');return}
+    if(password.length<6){showToast('密码至少6位','error');return}
+    if(!document.getElementById('regPrivacy').checked){showToast('请先同意隐私协议','error');return}
+    try{
+      var data=await api('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username,password:password,phone:phone,regCode:regCode})});
+      localStorage.setItem('userToken',JSON.stringify(data.user));
+      localStorage.setItem('userPhone',data.user.phone);
+      showToast('注册成功！请登录','success');
+      document.getElementById('loginAccount').value=phone;
+      switchAuth('login');
+    }catch(e){showToast(e.message,'error')}
+  }
+
+  // 登录
+  async function doLogin(){
+    var login=document.getElementById('loginAccount').value.trim();
+    var password=document.getElementById('loginPassword').value;
+    if(!login||!password){showToast('请输入用户名/手机号和密码','error');return}
+    try{
+      var data=await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:login,password:password})});
+      localStorage.setItem('userToken',JSON.stringify(data.user));
+      localStorage.setItem('userPhone',data.user.phone);
+      showToast('登录成功！','success');
+      setTimeout(function(){goBack()},800);
+    }catch(e){showToast(e.message,'error')}
+  }
+
+  function goBack(){
+    var ref=document.referrer;
+    if(ref&&ref.indexOf(location.host)>0)location.href=ref;
+    else location.href='/book.html';
+  }
+
+  // 已登录直接返回
+  if(localStorage.getItem('userToken'))goBack();
+</script>
+
+<style>
+.auth-tab{flex:1;padding:10px 0;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:var(--font-body);font-size:15px;font-weight:500;color:var(--muted);transition:all .2s}
+.auth-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+</style>
+</body>
+</html>

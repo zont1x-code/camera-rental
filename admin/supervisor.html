@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>监控面板</title>
+<link rel="stylesheet" href="admin.css">
+<style>
+  .supervisor-layout{display:flex;min-height:100vh}
+  .supervisor-sidebar{width:200px;flex-shrink:0;background:#0d0d1a;color:#ccc;position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column}
+  .supervisor-sidebar .brand{font-size:1.1rem;font-weight:700;color:#fff;padding:20px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .supervisor-sidebar .brand span{color:var(--orange);font-size:.7rem;display:block;font-weight:400;margin-top:2px}
+  .supervisor-sidebar .nav-btn{display:block;width:100%;padding:12px 20px;background:none;border:none;color:#999;font-size:.85rem;cursor:pointer;text-align:left;font-family:inherit;border-left:3px solid transparent;transition:all .15s}
+  .supervisor-sidebar .nav-btn:hover{color:#ddd;background:rgba(255,255,255,.04)}
+  .supervisor-sidebar .nav-btn.active{color:#fff;background:rgba(255,255,255,.06);border-left-color:var(--orange);font-weight:600}
+  .supervisor-sidebar .footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto}
+  .supervisor-sidebar .footer button{width:100%;padding:8px;background:rgba(255,255,255,.06);color:#ccc;border:1px solid rgba(255,255,255,.1);border-radius:6px;cursor:pointer;font-family:inherit;font-size:.85rem}
+  .supervisor-main{flex:1;margin-left:200px;padding:24px;min-width:0}
+  .panel-heading{font-size:1.2rem;font-weight:700;margin-bottom:18px;color:#1a1a2e}
+  .idle-warn{color:#f59e0b;font-weight:600}
+  .idle-red{color:#e74c3c;font-weight:700}
+</style>
+</head>
+<body>
+<div class="supervisor-layout">
+  <nav class="supervisor-sidebar">
+    <div class="brand">监控面板<span>Supervisor</span></div>
+    <button class="nav-btn active" data-tab="log">操作日志</button>
+    <button class="nav-btn" data-tab="sessions">在线管理</button>
+    <button class="nav-btn" data-tab="admins">管理员管理</button>
+    <div class="footer"><button onclick="logout()">退出登录</button></div>
+  </nav>
+  <main class="supervisor-main">
+    <!-- 操作日志 -->
+    <div id="tab-log" class="tab-content active">
+      <h2 class="panel-heading">操作日志（最近100条）</h2>
+      <div class="toolbar"><select id="logAdminFilter" onchange="loadLog()"><option value="">全部管理员</option></select> <button class="btn-primary" onclick="loadLog()">刷新</button></div>
+      <div class="table-wrap"><table><thead><tr><th>时间</th><th>管理员</th><th>操作</th><th>对象</th><th>详情</th></tr></thead><tbody id="logBody"></tbody></table></div>
+    </div>
+    <!-- 在线管理 -->
+    <div id="tab-sessions" class="tab-content">
+      <h2 class="panel-heading">在线管理员</h2>
+      <div class="toolbar"><button class="btn-primary" onclick="loadSessions()">刷新</button> <span id="sessionTime" style="font-size:.8rem;color:var(--gray-dark);"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>用户名</th><th>角色</th><th>登录时间</th><th>最后活动</th><th>状态</th></tr></thead><tbody id="sessionsBody"></tbody></table></div>
+    </div>
+    <!-- 管理员管理 -->
+    <div id="tab-admins" class="tab-content">
+      <h2 class="panel-heading">管理员账号</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <input type="text" id="newAdminUser" placeholder="用户名" style="width:140px;">
+        <input type="password" id="newAdminPwd" placeholder="密码(≥6位)" style="width:140px;">
+        <button class="btn-primary" onclick="addAdmin()">添加管理员</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="adminsBody"></tbody></table></div>
+    </div>
+  </main>
+</div>
+
+<script>
+var adminToken=localStorage.getItem('adminToken');
+if(!adminToken||localStorage.getItem('adminRole')!=='supervisor'){location.href='/admin/login.html'}
+function logout(){localStorage.removeItem('adminToken');localStorage.removeItem('adminRole');localStorage.removeItem('adminUser');location.href='/admin/login.html'}
+setInterval(function(){fetch('/admin/api/heartbeat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:adminToken})}).catch(function(){})},30000);
+
+function api(url,opts){return fetch(url,opts||{}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'请求失败');return d})})}
+function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function fmtDate(iso){var d=new Date(iso);return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0')+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}
+
+document.querySelectorAll('.supervisor-sidebar .nav-btn').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nav-btn').forEach(function(x){x.classList.remove('active')});b.classList.add('active');document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active')});document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='sessions')loadSessions();if(b.dataset.tab==='log')loadLog();if(b.dataset.tab==='admins')loadAdmins()})});
+
+async function loadLog(){var sel=document.getElementById('logAdminFilter');var admin=sel.value;var d=await api('/admin/api/log?limit=100'+(admin?'&admin='+admin:''));if(!admin){sel.innerHTML='<option value="">全部管理员</option>';d.admins.forEach(function(a){sel.innerHTML+='<option value="'+a+'">'+a+'</option>'});}document.getElementById('logBody').innerHTML=d.logs.length?d.logs.map(function(l){return'<tr><td>'+fmtDate(l.timestamp)+'</td><td>'+esc(l.adminUser||'')+'</td><td>'+esc(l.action)+'</td><td>'+esc(l.target||'')+'</td><td>'+esc(l.detail||'')+'</td></tr>'}).join(''):'<tr><td colspan="5" style="color:#999;text-align:center;">暂无记录</td></tr>'}
+async function loadSessions(){var d=await api('/admin/api/sessions');var now=new Date().toTimeString().substring(0,8);document.getElementById('sessionTime').textContent='刷新于 '+now;document.getElementById('sessionsBody').innerHTML=d.length?d.map(function(s){var cls=s.idleSeconds>1200?'idle-red':s.idleSeconds>600?'idle-warn':'';var status=s.idleSeconds>1200?'超时（>20分钟）':s.idleSeconds>600?'空闲（>10分钟）':'活跃';return '<tr><td>'+esc(s.username)+'</td><td>'+esc(s.role)+'</td><td>'+fmtDate(s.loginAt)+'</td><td>'+Math.floor(s.idleSeconds/60)+'分钟前</td><td class="'+cls+'">'+status+'</td></tr>'}).join(''):'<tr><td colspan="5" style="color:#999;text-align:center;">无活跃会话</td></tr>'}
+async function loadAdmins(){var d=await api('/admin/api/admins');document.getElementById('adminsBody').innerHTML=d.map(function(a){return '<tr><td>'+a.id+'</td><td>'+esc(a.username)+'</td><td>'+esc(a.role)+'</td><td>'+fmtDate(a.createdAt)+'</td><td>'+(a.role!=='supervisor'?'<button class="delete-btn" onclick="delAdmin('+a.id+')">删除</button> <button class="delete-btn" style="background:#555;" onclick="chPwd('+a.id+')">改密</button>':'<span style="color:#999;">超级管理员</span>')+'</td></tr>'}).join('')}
+async function addAdmin(){var u=document.getElementById('newAdminUser').value.trim();var p=document.getElementById('newAdminPwd').value;if(!u||!p||p.length<6){alert('请填写完整（密码至少6位）');return}try{await api('/admin/api/admins',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});document.getElementById('newAdminUser').value='';document.getElementById('newAdminPwd').value='';loadAdmins()}catch(e){alert(e.message)}}
+async function delAdmin(id){if(!confirm('确定删除？'))return;await fetch('/admin/api/admins/'+id,{method:'DELETE'});loadAdmins()}
+async function chPwd(id){var p=prompt('新密码（至少6位）:');if(!p||p.length<6)return;await api('/admin/api/admins/'+id+'/password',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})});alert('已修改')}
+
+loadLog();
+</script>
+</body>
+</html>
