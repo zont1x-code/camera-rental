@@ -476,7 +476,7 @@ async function loadAdminCalendar() {
       var s = new Date(b.startDate), e = new Date(b.endDate), cur = new Date(s);
       while (cur <= e) {
         var key = cur.getFullYear() + '-' + pad(cur.getMonth()+1) + '-' + pad(cur.getDate());
-        adminCalBlocks[key] = b.id;
+        adminCalBlocks[key] = { id: b.id, type: b.blockType || 'buffer' };
         cur.setDate(cur.getDate() + 1);
       }
     });
@@ -489,14 +489,14 @@ function calDayClick(e){
   var dsv = el.dataset.date;
   if(!dsv)return;
   if(adminCalBlocks[dsv]){
-    // 点击已封锁日期 → 解除封锁
-    if(confirm('解除封锁日期 '+dsv+' ？')){
-      api('/admin/api/blocks/'+adminCalBlocks[dsv],{method:'DELETE'}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)});
+    var blk=adminCalBlocks[dsv];
+    if(confirm('解除 '+dsv+' 的封锁（当前类型：'+(blk.type==='buffer'?'🟢缓冲期':blk.type==='admin'?'🔵管理员预留':'🔴封锁')+'）？')){
+      api('/admin/api/blocks/'+blk.id,{method:'DELETE'}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)});
     }
   } else if(!adminCalBookings[dsv]){
-    // 点击空闲日期 → 封锁
-    if(confirm('封锁 '+dsv+' 一整天？（相机不可租）')){
-      api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:dsv,endDate:dsv})}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)});
+    var type=prompt('选择封锁类型：\n1 - 🟢 缓冲期（寄送/维护两天）\n2 - 🔵 管理员预留（超7天租聘）\n\n输入 1 或 2','1');
+    if(type==='1'||type==='2'){
+      api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:dsv,endDate:dsv,blockType:type==='2'?'admin':'buffer'})}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)});
     }
   }
 }
@@ -516,7 +516,12 @@ function renderAdminCal() {
     var cls = 'calendar-day';
     if (dsv === todayStr) cls += ' today';
     if (booked) { cls += ' booked-date'; var titles=booked.slice(0,3).join('、')+(booked.length>3?'等'+booked.length+'人':''); }
-    if (blocked) { cls += ' blocked-date'; if(!booked)titles='管理员封锁'; }
+    if (blocked) {
+      if (blocked.type === 'buffer') cls += ' blocked-green';
+      else if (blocked.type === 'admin') cls += ' blocked-blue';
+      else cls += ' blocked-date';
+      if (!booked) titles = blocked.type === 'buffer' ? '缓冲期' : (blocked.type === 'admin' ? '管理员预留' : '封锁');
+    }
     html += '<div class="' + cls + '" data-date="' + dsv + '"' + (booked||blocked?' title="'+titles+'"':'') + '>' + day + '</div>';
   }
   document.getElementById('adminCalGrid').innerHTML = html;
@@ -537,10 +542,10 @@ var adminCameras=[],camPhotoFile=null;
 async function loadCamerasTab(){adminCameras=await api('/api/cameras');renderCamTable()}
 function renderCamTable(){
   var tbody=document.getElementById('camerasTable');
-  if(!adminCameras.length){tbody.innerHTML='<tr><td colspan="8" style="color:#999;text-align:center;">暂无机型</td></tr>';return}
-  tbody.innerHTML=adminCameras.map(function(c){return '<tr><td><img src="'+c.image+'" style="width:50px;height:35px;object-fit:cover;border-radius:4px;"></td><td>'+esc(c.model)+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">'+esc(c.advantage)+'</td><td>¥'+c.price1day+'</td><td>¥'+c.price2day+'</td><td>¥'+c.price3dayPerDay+'</td><td>'+(c.hot?'':'')+'</td><td><button class="delete-btn" style="margin-right:4px;" onclick="editCam('+c.id+')">编辑</button><button class="delete-btn" onclick="deleteCam('+c.id+')">删除</button></td></tr>'}).join('')}
+  if(!adminCameras.length){tbody.innerHTML='<tr><td colspan="10" style="color:#999;text-align:center;">暂无机型</td></tr>';return}
+  tbody.innerHTML=adminCameras.map(function(c){return '<tr><td><img src="'+c.image+'" style="width:50px;height:35px;object-fit:cover;border-radius:4px;"></td><td>'+esc(c.model)+'</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;">'+esc(c.advantage)+'</td><td>'+c.price1day+'</td><td>'+c.price2day+'</td><td>'+c.price3dayPerDay+'</td><td>'+(c.price5dayPerDay||0)+'</td><td>'+(c.price7day||0)+'</td><td>'+(c.hot?'':'')+'</td><td><button class="delete-btn" style="margin-right:4px;" onclick="editCam('+c.id+')">编辑</button><button class="delete-btn" onclick="deleteCam('+c.id+')">删除</button></td></tr>'}).join('')}
 
-function showCamForm(cam){camPhotoFile=null;document.getElementById('camPhotoFile').value='';document.getElementById('camPhotoPreview').style.display='none';var id='';if(cam){id=cam.id;document.getElementById('camId').value=cam.id;document.getElementById('camModel').value=cam.model;document.getElementById('camAdvantage').value=cam.advantage;document.getElementById('camDetail').value=cam.detail||'';document.getElementById('camImageUrl').value=cam.image||'';document.getElementById('camPrice1').value=cam.price1day;document.getElementById('camPrice2').value=cam.price2day;document.getElementById('camPrice3').value=cam.price3dayPerDay;document.getElementById('camHot').checked=cam.hot===true;document.getElementById('camFormTitle').textContent='编辑机型';if(cam.image){document.getElementById('camPhotoPreviewImg').src=cam.image;document.getElementById('camPhotoPreview').style.display=''}}else{document.getElementById('camId').value='';document.getElementById('camModel').value='';document.getElementById('camAdvantage').value='';document.getElementById('camDetail').value='';document.getElementById('camImageUrl').value='';document.getElementById('camPrice1').value='';document.getElementById('camPrice2').value='';document.getElementById('camPrice3').value='';document.getElementById('camHot').checked=false;document.getElementById('camFormTitle').textContent='新增机型'}document.getElementById('camForm').style.display='block';document.getElementById('camForm').scrollIntoView({behavior:'smooth'})}
+function showCamForm(cam){camPhotoFile=null;document.getElementById('camPhotoFile').value='';document.getElementById('camPhotoPreview').style.display='none';if(cam){document.getElementById('camId').value=cam.id;document.getElementById('camModel').value=cam.model;document.getElementById('camAdvantage').value=cam.advantage;document.getElementById('camDetail').value=cam.detail||'';document.getElementById('camImageUrl').value=cam.image||'';document.getElementById('camPrice1').value=cam.price1day;document.getElementById('camPrice2').value=cam.price2day;document.getElementById('camPrice3').value=cam.price3dayPerDay;document.getElementById('camPrice5').value=cam.price5dayPerDay||'';document.getElementById('camPrice7').value=cam.price7day||'';document.getElementById('camHot').checked=cam.hot===true;document.getElementById('camFormTitle').textContent='编辑机型';if(cam.image){document.getElementById('camPhotoPreviewImg').src=cam.image;document.getElementById('camPhotoPreview').style.display=''}}else{document.getElementById('camId').value='';document.getElementById('camModel').value='';document.getElementById('camAdvantage').value='';document.getElementById('camDetail').value='';document.getElementById('camImageUrl').value='';document.getElementById('camPrice1').value='';document.getElementById('camPrice2').value='';document.getElementById('camPrice3').value='';document.getElementById('camPrice5').value='';document.getElementById('camPrice7').value='';document.getElementById('camHot').checked=false;document.getElementById('camFormTitle').textContent='新增机型'}document.getElementById('camForm').style.display='block';document.getElementById('camForm').scrollIntoView({behavior:'smooth'})}
 
 async function editCam(id){var c=adminCameras.find(function(cc){return cc.id===id});if(c)showCamForm(c)}
 
@@ -551,8 +556,8 @@ async function saveCamera(){
   var id=document.getElementById('camId').value,url=id?'/admin/api/cameras/'+id:'/admin/api/cameras',method=id?'PUT':'POST';
   try{
     var res;
-    if(camPhotoFile){var fd=new FormData();fd.append('photo',camPhotoFile);fd.append('model',document.getElementById('camModel').value);fd.append('advantage',document.getElementById('camAdvantage').value);fd.append('detail',document.getElementById('camDetail').value);fd.append('price1day',document.getElementById('camPrice1').value);fd.append('price2day',document.getElementById('camPrice2').value);fd.append('price3dayPerDay',document.getElementById('camPrice3').value);fd.append('hot',document.getElementById('camHot').checked);res=await fetch(url,{method:method,body:fd})}
-    else{res=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:document.getElementById('camModel').value,advantage:document.getElementById('camAdvantage').value,detail:document.getElementById('camDetail').value,image:document.getElementById('camImageUrl').value,price1day:document.getElementById('camPrice1').value,price2day:document.getElementById('camPrice2').value,price3dayPerDay:document.getElementById('camPrice3').value,hot:document.getElementById('camHot').checked})})}
+    if(camPhotoFile){var fd=new FormData();fd.append('photo',camPhotoFile);fd.append('model',document.getElementById('camModel').value);fd.append('advantage',document.getElementById('camAdvantage').value);fd.append('detail',document.getElementById('camDetail').value);fd.append('price1day',document.getElementById('camPrice1').value);fd.append('price2day',document.getElementById('camPrice2').value);fd.append('price3dayPerDay',document.getElementById('camPrice3').value);fd.append('price5dayPerDay',document.getElementById('camPrice5').value);fd.append('price7day',document.getElementById('camPrice7').value);fd.append('hot',document.getElementById('camHot').checked);res=await fetch(url,{method:method,body:fd})}
+    else{res=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:document.getElementById('camModel').value,advantage:document.getElementById('camAdvantage').value,detail:document.getElementById('camDetail').value,image:document.getElementById('camImageUrl').value,price1day:document.getElementById('camPrice1').value,price2day:document.getElementById('camPrice2').value,price3dayPerDay:document.getElementById('camPrice3').value,price5dayPerDay:document.getElementById('camPrice5').value,price7day:document.getElementById('camPrice7').value,hot:document.getElementById('camHot').checked})})}
     if(!res.ok){var d=await res.json().catch(function(){return{}});throw new Error(d.error||'保存失败')}
     hideCamForm();loadCamerasTab()
   }catch(e){alert(e.message)}

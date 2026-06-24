@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS cameras (
   price1day INT DEFAULT 0,
   price2day INT DEFAULT 0,
   price3dayPerDay INT DEFAULT 0,
+  price5dayPerDay INT DEFAULT 0,
+  price7day INT DEFAULT 0,
   hot TINYINT(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -111,6 +113,7 @@ CREATE TABLE IF NOT EXISTS camera_blocks (
   cameraId INT NOT NULL,
   startDate DATE NOT NULL,
   endDate DATE NOT NULL,
+  blockType VARCHAR(20) DEFAULT 'buffer',
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_camera (cameraId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

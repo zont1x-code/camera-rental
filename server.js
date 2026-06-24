@@ -45,7 +45,7 @@ app.post('/api/bookings', async (req, res) => {
     if (!cameraId || !startDate || !endDate || !name || !school || !phone) return res.status(400).json({ error: '缺少必填字段' });
     const start = new Date(startDate), end = new Date(endDate);
     if (end < start) return res.status(400).json({ error: '结束日期不能早于开始日期' });
-    if (Math.ceil((end - start) / 86400000) + 1 > 3) return res.status(400).json({ error: '最多3天' });
+    if (Math.ceil((end - start) / 86400000) + 1 > 7) return res.status(400).json({ error: '最多7天，超过请联系管理员' });
     const conflicts = await query('SELECT 1 FROM bookings WHERE cameraId=? AND status NOT IN (?,?) AND startDate<=? AND endDate>=?', [parseInt(cameraId), 'cancelled', 'rejected', endDate, startDate]);
     if (conflicts.length > 0) return res.status(409).json({ error: '该时间段已被预约' });
     const id = Date.now();
@@ -78,7 +78,7 @@ app.post('/api/renew', async (req, res) => {
     const { orderId, newStartDate, newEndDate } = req.body;
     if (!orderId || !newStartDate || !newEndDate) return res.status(400).json({ error: '缺少必填字段' });
     const days = Math.ceil((new Date(newEndDate) - new Date(newStartDate)) / 86400000) + 1;
-    if (days > 3) return res.status(400).json({ error: '续约最多3天' });
+    if (days > 7) return res.status(400).json({ error: '续约最多7天' });
     const booking = await get('SELECT * FROM bookings WHERE id=?', [parseInt(orderId)]);
     if (!booking) return res.status(404).json({ error: '订单不存在' });
     if (!['confirmed', 'renting'].includes(booking.status)) return res.status(400).json({ error: '当前状态不支持续约' });
@@ -425,22 +425,22 @@ app.put('/admin/api/users/:id/password', async (req, res) => {
 // ==================== ADMIN CAMERAS ====================
 app.post('/admin/api/cameras', upload.single('photo'), async (req, res) => {
   try {
-    const { model, advantage, detail, price1day, price2day, price3dayPerDay, hot } = req.body;
+    const { model, advantage, detail, price1day, price2day, price3dayPerDay, price5dayPerDay, price7day, hot } = req.body;
     if (!model || !advantage) return res.status(400).json({ error: '型号和优势为必填' });
     let image = req.file ? '/uploads/' + req.file.filename : (req.body.image || '').trim();
-    await run('INSERT INTO cameras (model,advantage,detail,image,price1day,price2day,price3dayPerDay,hot) VALUES (?,?,?,?,?,?,?,?)', [model.trim(), advantage.trim(), (detail || '').trim(), image, parseInt(price1day) || 0, parseInt(price2day) || 0, parseInt(price3dayPerDay) || 0, hot === 'true' || hot === true ? 1 : 0]);
+    await run('INSERT INTO cameras (model,advantage,detail,image,price1day,price2day,price3dayPerDay,price5dayPerDay,price7day,hot) VALUES (?,?,?,?,?,?,?,?,?,?)', [model.trim(), advantage.trim(), (detail || '').trim(), image, parseInt(price1day) || 0, parseInt(price2day) || 0, parseInt(price3dayPerDay) || 0, parseInt(price5dayPerDay) || 0, parseInt(price7day) || 0, hot === 'true' || hot === true ? 1 : 0]);
     res.status(201).json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/admin/api/cameras/:id', upload.single('photo'), async (req, res) => {
   try {
-    const { model, advantage, detail, price1day, price2day, price3dayPerDay, hot } = req.body;
+    const { model, advantage, detail, price1day, price2day, price3dayPerDay, price5dayPerDay, price7day, hot } = req.body;
     const cam = await get('SELECT * FROM cameras WHERE id=?', [parseInt(req.params.id)]);
     if (!cam) return res.status(404).json({ error: '不存在' });
     let image = cam.image;
     if (req.file) image = '/uploads/' + req.file.filename;
     else if (req.body.image !== undefined) image = req.body.image.trim();
-    await run('UPDATE cameras SET model=?,advantage=?,detail=?,image=?,price1day=?,price2day=?,price3dayPerDay=?,hot=? WHERE id=?', [model !== undefined ? model.trim() : cam.model, advantage !== undefined ? advantage.trim() : cam.advantage, detail !== undefined ? detail.trim() : cam.detail, image, parseInt(price1day) || 0, parseInt(price2day) || 0, parseInt(price3dayPerDay) || 0, hot === 'true' || hot === true ? 1 : 0, parseInt(req.params.id)]);
+    await run('UPDATE cameras SET model=?,advantage=?,detail=?,image=?,price1day=?,price2day=?,price3dayPerDay=?,price5dayPerDay=?,price7day=?,hot=? WHERE id=?', [model !== undefined ? model.trim() : cam.model, advantage !== undefined ? advantage.trim() : cam.advantage, detail !== undefined ? detail.trim() : cam.detail, image, parseInt(price1day) || 0, parseInt(price2day) || 0, parseInt(price3dayPerDay) || 0, parseInt(price5dayPerDay) || 0, parseInt(price7day) || 0, hot === 'true' || hot === true ? 1 : 0, parseInt(req.params.id)]);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -454,9 +454,9 @@ app.get('/admin/api/blocks', async (req, res) => {
 });
 app.post('/admin/api/blocks', async (req, res) => {
   try {
-    const { cameraId, startDate, endDate } = req.body;
+    const { cameraId, startDate, endDate, blockType } = req.body;
     if (!cameraId || !startDate || !endDate) return res.status(400).json({ error: '缺少参数' });
-    await run('INSERT INTO camera_blocks (cameraId,startDate,endDate,createdAt) VALUES (?,?,?,NOW())', [parseInt(cameraId), startDate, endDate]);
+    await run('INSERT INTO camera_blocks (cameraId,startDate,endDate,blockType,createdAt) VALUES (?,?,?,?,NOW())', [parseInt(cameraId), startDate, endDate, blockType || 'buffer']);
     res.status(201).json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

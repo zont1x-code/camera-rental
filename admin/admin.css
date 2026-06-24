@@ -98,9 +98,11 @@ tr.row-overdue{background:#fff0f0;border-left:3px solid #e74c3c}
 .calendar-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.9rem;color:#333;cursor:default}
 .calendar-day.empty{cursor:default}
 .calendar-day.today{font-weight:700;color:var(--orange)}
-.calendar-day.blocked-date{background:#eee;color:#aaa}
-.calendar-day.blocked-date::after{content:'🔒';font-size:9px;position:absolute;bottom:0;right:1px}
-.calendar-day.booked-date{color:#ccc;position:relative;background:rgba(231,76,60,.08)}
-.calendar-day.booked-date::after{content:'';position:absolute;top:50%;left:15%;right:15%;height:1.5px;background:#e74c3c;transform:rotate(-30deg);opacity:.5}
+.calendar-day.blocked-green{background:rgba(22,163,74,.08);color:#999;position:relative}
+.calendar-day.blocked-green::after{content:'';position:absolute;top:50%;left:15%;right:15%;height:1.5px;background:#16a34a;transform:rotate(-30deg);opacity:.5}
+.calendar-day.blocked-blue{background:rgba(0,128,255,.08);color:#999;position:relative}
+.calendar-day.blocked-blue::after{content:'';position:absolute;top:50%;left:15%;right:15%;height:1.5px;background:#007aff;transform:rotate(-30deg);opacity:.5}
+.calendar-day.blocked-date{color:#ccc;position:relative;background:rgba(231,76,60,.08)}
+.calendar-day.blocked-date::after{content:'';position:absolute;top:50%;left:15%;right:15%;height:1.5px;background:#e74c3c;transform:rotate(-30deg);opacity:.5}
 
 @media(max-width:768px){.admin-sidebar{display:none}.admin-main{margin-left:0;padding:16px}.stats-row{flex-direction:column}}
