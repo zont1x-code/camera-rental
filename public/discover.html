@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="发现精选相机实拍、社区分享作品与最新公告">
-  <title>发现 - Camera Rental</title>
+  <title>发现 - 春叶棠 · Camera Rental</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,6 +13,7 @@
   <!-- 手机端子导航 -->
   <div class="discover-subnav" id="discoverSubnav">
     <button class="subnav-btn active" onclick="scrollToSection('official',this)">官方精选</button>
+    <button class="subnav-btn" onclick="scrollToSection('gallery',this)">机型实拍</button>
     <button class="subnav-btn" onclick="scrollToSection('community',this)">社区分享</button>
     <button class="subnav-btn" onclick="scrollToSection('announcements',this)">公告栏</button>
   </div>
@@ -24,6 +25,10 @@
         <button class="sidebar-item active" data-section="official">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           官方精选
+        </button>
+        <button class="sidebar-item" data-section="gallery">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          机型实拍
         </button>
         <button class="sidebar-item" data-section="community">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -48,13 +53,6 @@
             </div>
           </div>
 
-          <div class="card" id="cameraDetails">
-            <div class="skeleton skeleton-title"></div>
-            <div class="skeleton skeleton-card"></div>
-            <div class="skeleton skeleton-card"></div>
-            <div class="skeleton skeleton-card"></div>
-          </div>
-
           <div class="card">
             <h2>租赁流程</h2>
             <div class="steps-row">
@@ -64,6 +62,10 @@
               <div class="step-item"><div class="step-circle">4</div><div class="step-label">按时归还</div></div>
             </div>
           </div>
+        </div>
+
+        <div id="section-gallery" class="discover-section" data-section-name="gallery">
+          <div id="cameraGallery"></div>
         </div>
 
         <div id="section-community" class="discover-section" data-section-name="community">
@@ -128,7 +130,7 @@
   <script>
     var sidebarItems=document.querySelectorAll('.discover-sidebar .sidebar-item');
     var sections=document.querySelectorAll('.discover-section');
-    sidebarItems.forEach(function(item){item.addEventListener('click',function(){var sid=this.dataset.section;sidebarItems.forEach(function(i){i.classList.remove('active')});sections.forEach(function(s){s.classList.remove('active')});this.classList.add('active');document.getElementById('section-'+sid).classList.add('active');if(sid==='community')loadPosts();if(sid==='announcements')loadAnnouncements()})});
+    sidebarItems.forEach(function(item){item.addEventListener('click',function(){var sid=this.dataset.section;sidebarItems.forEach(function(i){i.classList.remove('active')});sections.forEach(function(s){s.classList.remove('active')});this.classList.add('active');document.getElementById('section-'+sid).classList.add('active');if(sid==='gallery')loadCameraGallery();if(sid==='community')loadPosts();if(sid==='announcements')loadAnnouncements()})});
 
     async function loadCameraDetails(){
       var cameras=await api('/api/cameras');
@@ -141,6 +143,27 @@
       try{var posts=await api('/api/posts?status=approved');var grid=document.getElementById('postsGrid');if(posts.length===0){grid.innerHTML='<div class="empty-state"><p style="color:var(--muted);">暂无分享，快来第一个分享吧！</p></div>';return}
         grid.innerHTML=posts.map(function(p){var img=p.image?'<img src="'+p.image+'" alt="'+esc(p.title||'')+'" loading="lazy">':'<div style="height:200px;background:var(--bg-dark);display:flex;align-items:center;justify-content:center;color:var(--meta);">暂无图片</div>';return '<div class="post-card">'+img+'<div class="post-body"><p><strong>'+esc(p.title||'无标题')+'</strong></p><p style="font-size:12px;color:var(--muted);">'+esc(p.description)+'</p><div class="post-meta">'+p.phoneMasked+' · '+formatDate(p.createdAt)+'</div></div></div>'}).join('')}
       catch(e){document.getElementById('postsGrid').innerHTML='<div class="empty-state"><p style="color:var(--muted);">加载失败</p></div>'}
+    }
+
+    async function loadCameraGallery(){
+      var cameras=await api('/api/cameras');
+      var allPhotos=await api('/api/camera-photos');
+      var html='';
+      cameras.forEach(function(c){
+        var photos=allPhotos.filter(function(p){return p.cameraId===c.id});
+        html+='<div class="card camera-gallery-card"><h2>'+esc(c.model)+'</h2><div class="gallery-desc">'+esc(c.detail||c.advantage)+'</div>';
+        if(photos.length){
+          html+='<div class="gallery-photos">';
+          photos.slice(0,9).forEach(function(p){html+='<div class="gallery-photo-item"><img src="'+p.image+'" alt="实拍" loading="lazy"></div>'});
+          if(photos.length>9) html+='<div class="gallery-more" onclick="alert(\'共'+photos.length+'张实拍\')">+'+ (photos.length-9)+'</div>';
+          html+='</div>';
+        } else {
+          html+='<div class="gallery-empty">暂无实拍照片</div>';
+        }
+        html+='</div>';
+      });
+      if(!cameras.length) html='<div class="empty-state"><p style="color:var(--muted);">暂无机型</p></div>';
+      document.getElementById('cameraGallery').innerHTML=html;
     }
 
     async function loadAnnouncements(){
@@ -165,6 +188,7 @@
       if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'start'})}
       document.querySelectorAll('.subnav-btn').forEach(function(b){b.classList.remove('active')});
       if(btn)btn.classList.add('active');
+      if(name==='gallery')loadCameraGallery();
       if(name==='community')loadPosts();
       if(name==='announcements')loadAnnouncements();
     }
@@ -175,7 +199,7 @@
       } catch(e) {}
     }
     loadFeaturedGallery();
-    initApp('discover');loadCameraDetails();loadPosts();
+    initApp('discover');loadPosts();
   </script>
 </body>
 </html>

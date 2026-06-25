@@ -37,7 +37,7 @@ function renderHeader(page){
   if(currentUser){userHTML='<a href="/my-bookings.html" class="user-phone" style="text-decoration:none;">'+currentUser.username+'</a>'}
   else{userHTML='<a href="/login.html" class="login-btn" style="text-decoration:none;">登录</a>'}
   var header=document.createElement('header');header.className='page-header';
-  header.innerHTML='<a href="/index.html" class="logo">Camera<span>Rental</span></a><div class="user-area">'+userHTML+'</div>';
+  header.innerHTML='<a href="/index.html" class="logo"><span style="color:#FF6B35;">春</span><span style="font-weight:400;color:#FF6B35;">叶</span><span style="background:linear-gradient(135deg,#FF6B35,#FF9500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">棠</span><span style="font-size:0.45em;font-weight:400;letter-spacing:.2em;opacity:.5;margin-left:6px;">CAMERA RENTAL</span></a><div class="user-area">'+userHTML+'</div>';
   document.body.insertBefore(header,document.body.firstChild);
 }
 

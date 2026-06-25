@@ -13,6 +13,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;backg
 .sidebar-btn:hover{color:#ddd;background:rgba(255,255,255,.04)}
 .sidebar-btn.active{color:#fff;background:rgba(255,255,255,.06);border-left-color:var(--orange);font-weight:600}
 .sidebar-divider{height:1px;background:rgba(255,255,255,.06);margin:8px 0}
+.sidebar-sub{display:none;padding-left:8px}
+.sidebar-parent.open .sidebar-sub{display:block}
+.sidebar-parent .parent-toggle{font-size:.82rem;opacity:.8}
+.sidebar-sub .sub-btn{padding:8px 20px 8px 24px;font-size:.8rem}
+
 .sidebar-parent .parent-toggle{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:#888}
 .sidebar-sub{display:none;padding-left:0}
 .sidebar-sub.open{display:block}
@@ -105,4 +110,28 @@ tr.row-overdue{background:#fff0f0;border-left:3px solid #e74c3c}
 .calendar-day.booked-date{color:red;position:relative;font-weight:700}
 .calendar-day.booked-date::after{content:'';position:absolute;top:50%;left:10%;right:10%;height:2px;background:#e74c3c;transform:rotate(-30deg);opacity:.9}
 
-@media(max-width:768px){.admin-sidebar{display:none}.admin-main{margin-left:0;padding:16px}.stats-row{flex-direction:column}}
+/* 机型实拍卡片 */
+.photo-card{position:relative;width:140px;height:105px;border-radius:8px;overflow:hidden;background:#e5e5e5;cursor:grab;transition:transform .15s,box-shadow .15s}
+.photo-card:hover{transform:scale(1.03);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.photo-card img{width:100%;height:100%;object-fit:cover;pointer-events:none}
+.photo-card .photo-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+.photo-card:hover .photo-del{opacity:1}
+.photo-add{display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px dashed #ccc;background:#f9f9f9}
+.photo-add span{font-size:32px;color:#bbb;font-weight:300}
+.photo-add:hover{border-color:var(--orange);background:#fff5f0}
+.photo-add:hover span{color:var(--orange)}
+
+@media(max-width:768px){
+  .admin-sidebar{display:none}
+  .admin-main{margin-left:0;padding:12px}
+  .stats-row{flex-direction:column}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .toolbar input,.toolbar select{width:100%}
+  table{font-size:.78rem}
+  th,td{padding:6px 8px}
+  .form-group input,.form-group textarea{font-size:16px}
+  .calendar-wrap{max-width:100%;padding:12px}
+  .photo-card{width:100px;height:75px}
+  .tab-heading{font-size:1.1rem}
+  .tab-content{padding:0}
+}

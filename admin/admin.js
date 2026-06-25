@@ -39,9 +39,12 @@ var statusLabels = {
   completed: '已完成', renew_pending: '续约待确认', cancelled: '已取消'
 };
 
+function toggleParent(btn){btn.parentElement.classList.toggle('open')}
+
 // ========== Tab 切换 ==========
 document.querySelectorAll('.sidebar-btn').forEach(function (btn) {
   btn.addEventListener('click', function () {
+    if (!btn.dataset.tab) return; // 父级菜单不切换 tab
     document.querySelectorAll('.sidebar-btn').forEach(function (b) { b.classList.remove('active'); });
     document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active'); });
     btn.classList.add('active');
@@ -50,7 +53,8 @@ document.querySelectorAll('.sidebar-btn').forEach(function (btn) {
     if (btn.dataset.tab === 'cameras') loadCamerasTab();
     if (btn.dataset.tab === 'users') loadUsersTab();
     if (btn.dataset.tab === 'archive') loadArchive();
-    if (btn.dataset.tab === 'calendar') loadCalendarTab();
+    if (btn.dataset.tab === 'calendar') { loadCalendarTab(); if(adminCalCameraId) loadAdminCalendar(); }
+    if (btn.dataset.tab === 'photos') loadPhotosTab();
     if (btn.dataset.tab === 'review') loadPosts();
     if (btn.dataset.tab === 'announcements') loadAnnouncements();
     if (btn.dataset.tab === 'featured') loadFeatured();
@@ -476,7 +480,7 @@ var adminCalYear, adminCalMonth, adminCalBookings = {}, adminCalBlocks = {}, adm
 
 async function loadCalendarTab() {
   var note = localStorage.getItem('calNote');
-  if (note) { var el = document.getElementById('calNote'); if (el) el.value = note; }
+  if (note) { var el = document.getElementById('calNote'); if (el) { el.value = note; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }
   var sel = document.getElementById('calCameraFilter');
   var cameras = await api('/api/cameras');
   sel.innerHTML = '<option value="">选择机型...</option>' +
@@ -575,6 +579,58 @@ function renderAdminCal() {
   }
   document.getElementById('adminCalGrid').innerHTML = html;
   document.querySelectorAll('#adminCalGrid .calendar-day:not(.empty)').forEach(function(el){el.addEventListener('click',calDayClick)});
+}
+
+// ========== 机型实拍 ==========
+var _camPhotos=[];
+async function loadPhotosTab() {
+  var sel = document.getElementById('photoCameraFilter');
+  var cameras = await api('/api/cameras');
+  sel.innerHTML = '<option value="">选择机型…</option>' + cameras.map(function(c) { return '<option value="' + c.id + '">' + c.model + '</option>'; }).join('');
+  sel.onchange = renderPhotoGrid;
+}
+async function renderPhotoGrid() {
+  var cid = document.getElementById('photoCameraFilter').value;
+  if (!cid) { document.getElementById('photoGrid').innerHTML = ''; return; }
+  _camPhotos = await api('/api/camera-photos?cameraId=' + cid);
+  var html = _camPhotos.map(function(p, i) {
+    return '<div class="photo-card" draggable="true" data-idx="' + i + '" data-id="' + p.id + '">' +
+      '<img src="' + p.image + '"><button class="photo-del" onclick="delCamPhoto(' + p.id + ')">&times;</button></div>';
+  }).join('');
+  html += '<div class="photo-card photo-add" onclick="document.getElementById(\'photoFileInput\').click()"><span>+</span></div>';
+  document.getElementById('photoGrid').innerHTML = html;
+  // 拖拽排序
+  var grid = document.getElementById('photoGrid'), drag = null;
+  grid.querySelectorAll('.photo-card:not(.photo-add)').forEach(function(card) {
+    card.addEventListener('dragstart', function(e) { drag = this; this.style.opacity = '.4'; e.dataTransfer.effectAllowed = 'move'; });
+    card.addEventListener('dragend', function() { this.style.opacity = '1'; drag = null; });
+    card.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    card.addEventListener('drop', function(e) {
+      e.preventDefault(); if (!drag || drag === this) return;
+      var from = parseInt(drag.dataset.idx), to = parseInt(this.dataset.idx);
+      var moved = _camPhotos.splice(from, 1)[0];
+      _camPhotos.splice(to, 0, moved);
+      var fd = new FormData(); fd.append('photos', JSON.stringify(_camPhotos.map(function(p) { return p.id; })));
+      fetch('/admin/api/camera-photos/reorder', { method: 'PUT', body: fd });
+      renderPhotoGrid();
+    });
+  });
+}
+async function uploadCamPhoto() {
+  var cid = document.getElementById('photoCameraFilter').value;
+  if (!cid) { alert('请先选择机型'); return; }
+  var files = document.getElementById('photoFileInput').files;
+  for (var i = 0; i < files.length; i++) {
+    var fd = new FormData(); fd.append('photo', files[i]); fd.append('cameraId', cid);
+    await fetch('/admin/api/camera-photos', { method: 'POST', body: fd });
+  }
+  document.getElementById('photoFileInput').value = '';
+  renderPhotoGrid();
+}
+async function delCamPhoto(id) {
+  if (!confirm('删除这张实拍图？')) return;
+  await fetch('/admin/api/camera-photos/' + id, { method: 'DELETE' });
+  renderPhotoGrid();
 }
 
 // ========== 库存数据 ==========

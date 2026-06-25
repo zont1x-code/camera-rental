@@ -171,6 +171,18 @@ body.hero-page{padding-bottom:0}
 .btn-xs{padding:4px 14px;font-size:11px;border-radius:var(--radius-pill)}
 .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
 
+/* ====== 预约向导（移动端分步） ====== */
+.booking-wizard{max-width:600px;margin:0 auto}
+.wiz-step{display:none}
+.wiz-step.active{display:block}
+.camera-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.wiz-price-bar{background:var(--bg-white);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:14px;font-size:14px;color:var(--muted);text-align:left;border:1px solid var(--border-card)}
+.wiz-price-bar .pr{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.wiz-price-bar .pr .val{font-weight:600;color:var(--accent)}
+.wiz-next{margin-top:12px}
+.wiz-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.wiz-toolbar span{font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--ink)}
+
 /* ====== Cards ====== */
 .card{
   background:rgba(22,22,32,.75);backdrop-filter:blur(24px) saturate(120%);
@@ -486,6 +498,23 @@ body.hero-page{padding-bottom:0}
 .lightbox-close{position:fixed;top:20px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:24px;border:none;cursor:pointer;z-index:10000;display:flex;align-items:center;justify-content:center;transition:background .2s}
 .lightbox-close:hover{background:rgba(255,255,255,.2)}
 
+/* ====== 机型实拍画廊 ====== */
+.camera-gallery-card{margin-bottom:24px;padding:20px}
+.camera-gallery-card h2{font-size:16px;font-weight:600;margin-bottom:4px}
+.camera-gallery-card .gallery-desc{font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+.gallery-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.gallery-photos .gallery-photo-item{aspect-ratio:1;overflow:hidden;border-radius:4px;background:var(--bg-dark);cursor:zoom-in}
+.gallery-photos .gallery-photo-item img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.gallery-photos .gallery-photo-item:hover img{transform:scale(1.05)}
+.gallery-photos .gallery-more{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:rgba(0,128,255,.04);border-radius:4px;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;text-align:center}
+.gallery-empty{color:var(--meta);font-size:13px;padding:12px 0}
+
+@media(max-width:640px){
+  .camera-gallery-card{padding:16px;margin-bottom:12px}
+  .camera-gallery-card h2{font-size:15px}
+  .gallery-photos{gap:3px}
+}
+
 /* ====== 个人中心菜单 ====== */
 .menu-item{display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer;transition:background .15s ease}
 .menu-item:hover{background:rgba(255,255,255,.03)}
@@ -579,7 +608,7 @@ body.hero-page{padding-bottom:0}
   .posts-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
 }
 @media(max-width:860px){
-  .container{padding:0 18px}
+  .container{padding:0 18px 0}
   .hero h1{font-size:clamp(32px,6vw,48px)}
   .hero .hero-sub{font-size:16px;max-width:380px}
   .hero .hero-actions{flex-direction:column;align-items:center}
@@ -614,10 +643,13 @@ body.hero-page{padding-bottom:0}
   .success-icon svg{width:34px;height:34px}
 }
 @media(max-width:640px){
-  .tab-bar-item{padding:4px 18px;min-width:60px}
+  .tab-bar{justify-content:space-around}
+  .tab-bar-item{padding:4px 10px;min-width:50px}
   .tab-bar-item svg{width:22px;height:22px}
-  .tab-bar-item .tab-label{font-size:.6rem}
-  .container{padding:0 14px}
+  .tab-bar-item .tab-label{font-size:.58rem}
+  .container{padding:60px 14px 0}
+  .page-header{padding:10px 14px}
+  .page-header .logo{font-size:17px}
   .hero{padding:40px 0 52px}
   .hero h1{font-size:clamp(28px,7vw,38px);line-height:1.1}
   .hero .hero-sub{font-size:14px;max-width:300px;margin-bottom:24px}

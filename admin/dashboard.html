@@ -10,7 +10,7 @@
   <div class="admin-layout">
     <!-- 侧边栏 -->
     <nav class="admin-sidebar">
-      <div class="sidebar-brand">Camera<span>Rental</span></div>
+      <div class="sidebar-brand"><span style="color:var(--orange);">春</span>叶<span style="background:linear-gradient(135deg,var(--orange),#ff9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">棠</span><span style="display:block;font-size:9px;font-weight:400;letter-spacing:.2em;opacity:.4;margin-top:2px;">CAMERA RENTAL</span></div>
       <div class="sidebar-nav">
         <button class="sidebar-btn active" data-tab="orders">订单管理</button>
         <button class="sidebar-btn" data-tab="calendar">订单日历</button>
@@ -24,6 +24,7 @@
           <button class="sidebar-btn parent-toggle" onclick="toggleParent(this)"> 内容运营 ▾</button>
           <div class="sidebar-sub">
             <button class="sidebar-btn sub-btn" data-tab="featured">  精选管理</button>
+            <button class="sidebar-btn sub-btn" data-tab="photos">  机型实拍</button>
             <button class="sidebar-btn sub-btn" data-tab="announcements">  公告管理</button>
             <button class="sidebar-btn sub-btn" data-tab="hero">  Hero管理</button>
           </div>
@@ -67,7 +68,7 @@
       <div id="tab-calendar" class="tab-content">
         <h2 class="tab-heading">订单日历</h2>
         <div class="toolbar"><select id="calCameraFilter"><option value="">选择机型...</option></select><select id="calBlockType"><option value="buffer">🟢 缓冲期</option><option value="admin">🔵 管理员预留</option></select></div>
-        <div class="calendar-wrap"><div class="calendar-header"><button id="adminPrevMonth" class="nav-btn">&lt;</button><span id="adminMonthLabel"></span><button id="adminNextMonth" class="nav-btn">&gt;</button></div><div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div id="adminCalGrid" class="calendar-grid"></div><div style="margin-top:12px;font-size:.78rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center;"><span>🔴红线=已预约</span><span>🟢绿线=缓冲期</span><span>🔵蓝线=管理员预留</span><input id="calNote" placeholder="备注..." style="flex:1;min-width:120px;padding:2px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;" onchange="localStorage.setItem('calNote',this.value)"></div></div>
+        <div class="calendar-wrap"><div class="calendar-header"><button id="adminPrevMonth" class="nav-btn">&lt;</button><span id="adminMonthLabel"></span><button id="adminNextMonth" class="nav-btn">&gt;</button></div><div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div id="adminCalGrid" class="calendar-grid"></div><div style="margin-top:12px;"><textarea id="calNote" placeholder="添加备注..." rows="1" style="width:100%;max-width:420px;padding:6px 10px;font-size:12px;border:1px solid var(--border);border-radius:4px;font-family:inherit;resize:none;overflow:hidden;" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';localStorage.setItem('calNote',this.value)"></textarea></div></div>
       </div>
 
       <!-- 库存数据 -->
@@ -92,6 +93,14 @@
           <button class="btn-primary" onclick="saveCamera()">保存</button> <button class="cancel-btn" onclick="hideCamForm()">取消</button>
         </div>
         <div class="table-wrap"><table><thead><tr><th>图</th><th>型号</th><th>优势</th><th>1天</th><th>2天</th><th>3天</th><th>5天</th><th>7天</th><th>续</th><th>热</th><th>操作</th></tr></thead><tbody id="camerasTable"></tbody></table></div>
+      </div>
+
+      <!-- 机型实拍 -->
+      <div id="tab-photos" class="tab-content">
+        <h2 class="tab-heading">机型实拍管理</h2>
+        <div class="toolbar"><select id="photoCameraFilter"><option value="">选择机型...</option></select></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="photoGrid"></div>
+        <input type="file" id="photoFileInput" accept="image/*" onchange="uploadCamPhoto()" style="display:none;" multiple>
       </div>
 
       <!-- 内容审核 -->

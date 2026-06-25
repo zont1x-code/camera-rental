@@ -35,9 +35,9 @@ app.get('/api/bookings', async (req, res) => {
     const { cameraId } = req.query;
     const rows = await query('SELECT startDate, endDate FROM bookings WHERE cameraId=? AND status NOT IN (?,?)', [parseInt(cameraId), 'cancelled', 'rejected']);
     const blocks = await query('SELECT startDate, endDate FROM camera_blocks WHERE cameraId=?', [parseInt(cameraId)]);
-    // 统一日期格式为 YYYY-MM-DD（MySQL DATE 列返回 JS Date 时区偏移问题）
-    const fmt = r => ({ startDate: r.startDate instanceof Date ? r.startDate.toISOString().slice(0,10) : String(r.startDate).slice(0,10), endDate: r.endDate instanceof Date ? r.endDate.toISOString().slice(0,10) : String(r.endDate).slice(0,10) });
-    res.json([...rows.map(fmt), ...blocks.map(fmt)]);
+    // 统一日期格式为 YYYY-MM-DD（本地时间，避免 UTC 偏移）
+    var fmtDateOnly = function(d) { if (d instanceof Date) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } return String(d).slice(0,10); };
+    res.json([...rows.map(function(r){return {startDate:fmtDateOnly(r.startDate),endDate:fmtDateOnly(r.endDate)}}), ...blocks.map(function(r){return {startDate:fmtDateOnly(r.startDate),endDate:fmtDateOnly(r.endDate)}})]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -61,7 +61,7 @@ app.post('/api/bookings', async (req, res) => {
     else if (days === 5 || days === 6) amount = (cam.price5dayPerDay || 0) * days;
     else if (days === 7) amount = cam.price7day || 0;
 
-    await run('INSERT INTO bookings (id,cameraId,startDate,endDate,name,school,remark,phone,status,amount,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())', [id, parseInt(cameraId), startDate, endDate, name.trim(), school.trim(), (remark || '').trim(), phone.trim(), 'pending', amount]);
+    await run('INSERT INTO bookings (id,cameraId,startDate,endDate,name,school,remark,phone,status,amount,createdAt) VALUES (?,?,DATE(?),DATE(?),?,?,?,?,?,?,NOW())', [id, parseInt(cameraId), startDate, endDate, name.trim(), school.trim(), (remark || '').trim(), phone.trim(), 'pending', amount]);
     res.status(201).json({ message: '预约成功！', booking: { id, cameraId: parseInt(cameraId), startDate, endDate, name: name.trim(), school: school.trim(), remark: (remark || '').trim(), phone: phone.trim(), status: 'pending', amount } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -478,8 +478,8 @@ app.get('/admin/api/blocks', async (req, res) => {
   try {
     const { cameraId } = req.query;
     const blocks = cameraId ? await query('SELECT * FROM camera_blocks WHERE cameraId=? ORDER BY startDate', [parseInt(cameraId)]) : await query('SELECT * FROM camera_blocks ORDER BY startDate');
-    const fm = r => ({ ...r, startDate: r.startDate instanceof Date ? r.startDate.toISOString().slice(0,10) : String(r.startDate).slice(0,10), endDate: r.endDate instanceof Date ? r.endDate.toISOString().slice(0,10) : String(r.endDate).slice(0,10) });
-    res.json(blocks.map(fm));
+    var fmtDateOnly = function(d) { if (d instanceof Date) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } return String(d).slice(0,10); };
+    res.json(blocks.map(function(r){r.startDate=fmtDateOnly(r.startDate);r.endDate=fmtDateOnly(r.endDate);return r}));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/api/blocks', async (req, res) => {
@@ -489,7 +489,7 @@ app.post('/admin/api/blocks', async (req, res) => {
     // 确保日期格式 YYYY-MM-DD
     const sd = String(startDate).slice(0, 10);
     const ed = String(endDate).slice(0, 10);
-    await run('INSERT INTO camera_blocks (cameraId,startDate,endDate,blockType,createdAt) VALUES (?,?,?,?,NOW())', [parseInt(cameraId), sd, ed, blockType || 'buffer']);
+    await run('INSERT INTO camera_blocks (cameraId,startDate,endDate,blockType,createdAt) VALUES (?,DATE(?),DATE(?),?,NOW())', [parseInt(cameraId), sd, ed, blockType || 'buffer']);
     res.status(201).json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -499,6 +499,35 @@ app.delete('/admin/api/blocks/:id', async (req, res) => {
 
 app.delete('/admin/api/cameras/:id', async (req, res) => {
   try { await run('DELETE FROM cameras WHERE id=?', [parseInt(req.params.id)]); res.json({ success: true }); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ==================== 机型实拍管理 ====================
+app.get('/api/camera-photos', async (req, res) => {
+  try {
+    const { cameraId } = req.query;
+    const sql = cameraId ? 'SELECT * FROM camera_photos WHERE cameraId=? ORDER BY \`sort_order\`' : 'SELECT * FROM camera_photos ORDER BY cameraId, sort_order';
+    const rows = cameraId ? await query(sql, [parseInt(cameraId)]) : await query(sql);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/admin/api/camera-photos', upload.single('photo'), async (req, res) => {
+  try {
+    const { cameraId } = req.body;
+    if (!cameraId || !req.file) return res.status(400).json({ error: '缺少参数' });
+    const img = '/uploads/' + req.file.filename;
+    await run('INSERT INTO camera_photos (cameraId,image,sort_order,createdAt) VALUES (?,?,0,NOW())', [parseInt(cameraId), img]);
+    res.status(201).json({ success: true, image: img });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/admin/api/camera-photos/reorder', upload.none(), async (req, res) => {
+  try {
+    const ids = JSON.parse(req.body.photos || '[]');
+    for (let i = 0; i < ids.length; i++) await run('UPDATE camera_photos SET sort_order=? WHERE id=?', [i, ids[i]]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/admin/api/camera-photos/:id', async (req, res) => {
+  try { await run('DELETE FROM camera_photos WHERE id=?', [parseInt(req.params.id)]); res.json({ success: true }); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ==================== 404 ====================
