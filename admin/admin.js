@@ -529,8 +529,7 @@ async function loadAdminCalendar() {
 }
 
 function calDayClick(e){
-  var el = e.target;
-  var dsv = el.dataset.date;
+  var dsv = this.dataset.date;
   if(!dsv)return;
   if(adminCalBlocks[dsv]){
     var blk=adminCalBlocks[dsv];
@@ -539,7 +538,8 @@ function calDayClick(e){
     }
   } else if(!adminCalBookings[dsv]){
     var bt = document.getElementById('calBlockType').value || 'buffer';
-    api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:dsv,endDate:dsv,blockType:bt})}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)})
+    if(!confirm('封锁 '+dsv+' 一整天？')) return;
+    api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:dsv.slice(0,10),endDate:dsv.slice(0,10),blockType:bt})}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)})
   }
 }
 
@@ -547,27 +547,34 @@ function renderAdminCal() {
   document.getElementById('adminMonthLabel').textContent = adminCalYear + ' 年 ' + (adminCalMonth + 1) + ' 月';
   var today = new Date();
   var todayStr = today.getFullYear() + '-' + pad(today.getMonth()+1) + '-' + pad(today.getDate());
-  var first = new Date(adminCalYear, adminCalMonth, 1), last = new Date(adminCalYear, adminCalMonth + 1, 0);
-  var off = first.getDay(), total = last.getDate();
-  var html = '';
-  for (var i = 0; i < off; i++) html += '<div class="calendar-day empty"></div>';
-  for (var day = 1; day <= total; day++) {
-    var dsv = adminCalYear + '-' + pad(adminCalMonth+1) + '-' + pad(day);
-    var booked = adminCalBookings[dsv];
-    var blocked = adminCalBlocks[dsv];
-    var cls = 'calendar-day';
-    if (dsv === todayStr) cls += ' today';
-    if (booked) { cls += ' booked-date'; var titles=booked.slice(0,3).join('、')+(booked.length>3?'等'+booked.length+'人':''); }
-    if (blocked) {
-      if (blocked.type === 'buffer') cls += ' blocked-green';
-      else if (blocked.type === 'admin') cls += ' blocked-blue';
-      else cls += ' blocked-date';
-      if (!booked) titles = blocked.type === 'buffer' ? '缓冲期' : (blocked.type === 'admin' ? '管理员预留' : '封锁');
+  var daysInMonth = new Date(adminCalYear, adminCalMonth+1, 0).getDate();
+  var firstDayOfWeek = new Date(adminCalYear, adminCalMonth, 1).getDay();
+  var html = '', day = 1;
+  for (var row = 0; row < 6; row++) {
+    for (var col = 0; col < 7; col++) {
+      var idx = row * 7 + col;
+      if (idx < firstDayOfWeek || day > daysInMonth) {
+        html += '<div class="calendar-day empty"></div>';
+      } else {
+        var dsv = adminCalYear + '-' + pad(adminCalMonth+1) + '-' + pad(day);
+        var booked = adminCalBookings[dsv];
+        var blocked = adminCalBlocks[dsv];
+        var cls = 'calendar-day';
+        if (dsv === todayStr) cls += ' today';
+        var titles = '';
+        if (booked) { cls += ' booked-date'; titles = booked.slice(0,3).join('、')+(booked.length>3?'等'+booked.length+'人':''); }
+        if (blocked) {
+          if (blocked.type === 'buffer') cls += ' blocked-green';
+          else if (blocked.type === 'admin') cls += ' blocked-blue';
+          if (!booked) titles = blocked.type === 'buffer' ? '缓冲期' : (blocked.type === 'admin' ? '管理员预留' : '');
+        }
+        html += '<div class="' + cls + '" data-date="' + dsv + '"' + (titles?' title="'+titles+'"':'') + '>' + day + '</div>';
+        day++;
+      }
     }
-    html += '<div class="' + cls + '" data-date="' + dsv + '"' + (booked||blocked?' title="'+titles+'"':'') + '>' + day + '</div>';
   }
   document.getElementById('adminCalGrid').innerHTML = html;
-  document.querySelectorAll('#adminCalGrid .calendar-day').forEach(function(el){el.addEventListener('click',calDayClick)});
+  document.querySelectorAll('#adminCalGrid .calendar-day:not(.empty)').forEach(function(el){el.addEventListener('click',calDayClick)});
 }
 
 // ========== 库存数据 ==========

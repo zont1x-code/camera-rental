@@ -486,7 +486,10 @@ app.post('/admin/api/blocks', async (req, res) => {
   try {
     const { cameraId, startDate, endDate, blockType } = req.body;
     if (!cameraId || !startDate || !endDate) return res.status(400).json({ error: '缺少参数' });
-    await run('INSERT INTO camera_blocks (cameraId,startDate,endDate,blockType,createdAt) VALUES (?,?,?,?,NOW())', [parseInt(cameraId), startDate, endDate, blockType || 'buffer']);
+    // 确保日期格式 YYYY-MM-DD
+    const sd = String(startDate).slice(0, 10);
+    const ed = String(endDate).slice(0, 10);
+    await run('INSERT INTO camera_blocks (cameraId,startDate,endDate,blockType,createdAt) VALUES (?,?,?,?,NOW())', [parseInt(cameraId), sd, ed, blockType || 'buffer']);
     res.status(201).json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
