@@ -43,10 +43,6 @@ function renderHeader(page){
 
 function updateHeaderUser(){var area=document.querySelector('.user-area');if(area&&currentUser){area.innerHTML='<span class="user-phone">'+currentUser.username+'</span>'}}
 
-// ====== 网络检测 ======
-window.addEventListener('offline',function(){showToast('网络已断开','error')});
-window.addEventListener('online',function(){showToast('网络已恢复','success')});
-
 // ====== 图片灯箱 ======
 document.addEventListener('click',function(e){
   var img=e.target.closest('.gallery img,.post-card img,.camera-detail-item img');
