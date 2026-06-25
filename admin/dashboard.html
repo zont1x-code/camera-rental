@@ -43,7 +43,7 @@
         <div class="stats-row" style="margin-bottom:16px;">
           <div class="stat-card"><h3>待处理</h3><div class="stat-value" id="statPending" style="color:#f59e0b;">0</div></div>
           <div class="stat-card"><h3>租赁中</h3><div class="stat-value" id="statRenting" style="color:var(--orange);">0</div></div>
-          <div class="stat-card"><h3>今日开始</h3><div class="stat-value" id="statToday" style="color:var(--orange);">0</div></div>
+          <div class="stat-card"><h3>今日收支</h3><div class="stat-value" id="statRevenue" style="color:#16a34a;">¥0</div><div style="font-size:11px;margin-top:4px;display:flex;gap:4px;"><input type="date" id="revenueDate" onchange="loadRevenue('date')" style="width:130px;font-size:11px;padding:2px 4px;"><select id="revenueMonth" onchange="loadRevenue('month')" style="font-size:11px;padding:2px 4px;"><option value="">月份</option></select><select id="revenueYear" onchange="loadRevenue('year')" style="font-size:11px;padding:2px 4px;"><option value="">年份</option></select></div></div>
         </div>
         <div class="toolbar">
           <input type="text" id="searchInput" placeholder="搜索姓名或手机号..." oninput="doSearch()">
@@ -59,15 +59,15 @@
           </select>
           <button class="btn-primary" onclick="exportCSV()">导出 CSV</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>机型</th><th>预约人</th><th>手机号</th><th>地址/学校</th><th>起始</th><th>结束</th><th>状态</th><th>续约</th><th>操作</th></tr></thead><tbody id="bookingsTable"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>机型</th><th>预约人</th><th>手机号</th><th>地址/学校</th><th>起始</th><th>结束</th><th>备注</th><th>金额</th><th>状态</th><th>续约</th><th>操作</th></tr></thead><tbody id="bookingsTable"></tbody></table></div>
         <div class="legend">提醒：<span class="leg-item leg-renew">续约待审</span><span class="leg-item leg-overdue">过期未还</span><span class="leg-item leg-today">今日开始</span><span class="leg-item leg-tomorrow">明日开始</span></div>
       </div>
 
       <!-- 订单日历 -->
       <div id="tab-calendar" class="tab-content">
         <h2 class="tab-heading">订单日历</h2>
-        <div class="toolbar"><select id="calCameraFilter"><option value="">选择机型...</option></select></div>
-        <div class="calendar-wrap"><div class="calendar-header"><button id="adminPrevMonth" class="nav-btn">&lt;</button><span id="adminMonthLabel"></span><button id="adminNextMonth" class="nav-btn">&gt;</button></div><div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div id="adminCalGrid" class="calendar-grid"></div><div style="margin-top:12px;font-size:.78rem;display:flex;gap:12px;flex-wrap:wrap;"><span>🔴红线=已预约</span><span>🟢绿线=缓冲期</span><span>🔵蓝线=管理员预留</span><span style="color:#999;">点空格选类型</span></div></div>
+        <div class="toolbar"><select id="calCameraFilter"><option value="">选择机型...</option></select><select id="calBlockType"><option value="buffer">🟢 缓冲期</option><option value="admin">🔵 管理员预留</option></select></div>
+        <div class="calendar-wrap"><div class="calendar-header"><button id="adminPrevMonth" class="nav-btn">&lt;</button><span id="adminMonthLabel"></span><button id="adminNextMonth" class="nav-btn">&gt;</button></div><div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div id="adminCalGrid" class="calendar-grid"></div><div style="margin-top:12px;font-size:.78rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center;"><span>🔴红线=已预约</span><span>🟢绿线=缓冲期</span><span>🔵蓝线=管理员预留</span><input id="calNote" placeholder="备注..." style="flex:1;min-width:120px;padding:2px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;" onchange="localStorage.setItem('calNote',this.value)"></div></div>
       </div>
 
       <!-- 库存数据 -->
@@ -86,12 +86,12 @@
           <input type="hidden" id="camId"><input type="hidden" id="camImageUrl">
           <div style="display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:180px;"><label>型号</label><input type="text" id="camModel"></div><div class="form-group" style="flex:1;min-width:180px;"><label>优势描述</label><input type="text" id="camAdvantage"></div></div>
           <div class="form-group"><label>详细参数</label><input type="text" id="camDetail"></div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:80px;"><label>单日 ¥</label><input type="number" id="camPrice1"></div><div class="form-group" style="flex:1;min-width:80px;"><label>两日 ¥</label><input type="number" id="camPrice2"></div><div class="form-group" style="flex:1;min-width:80px;"><label>3天/天 ¥</label><input type="number" id="camPrice3"></div><div class="form-group" style="flex:1;min-width:80px;"><label>5天/天 ¥</label><input type="number" id="camPrice5"></div><div class="form-group" style="flex:1;min-width:80px;"><label>7天周 ¥</label><input type="number" id="camPrice7"></div></div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;"><div class="form-group" style="flex:1;min-width:80px;"><label>单日 ¥</label><input type="number" id="camPrice1"></div><div class="form-group" style="flex:1;min-width:80px;"><label>两日 ¥</label><input type="number" id="camPrice2"></div><div class="form-group" style="flex:1;min-width:80px;"><label>3天/天 ¥</label><input type="number" id="camPrice3"></div><div class="form-group" style="flex:1;min-width:80px;"><label>5天/天 ¥</label><input type="number" id="camPrice5"></div><div class="form-group" style="flex:1;min-width:80px;"><label>7天周 ¥</label><input type="number" id="camPrice7"></div><div class="form-group" style="flex:1;min-width:80px;"><label>续约/天 ¥</label><input type="number" id="camRenewPrice"></div></div>
           <div class="form-group"><label>照片</label><input type="file" id="camPhotoFile" accept="image/*" onchange="handleCamPhoto(event)"><div id="camPhotoPreview" style="display:none;margin-top:8px;"><img id="camPhotoPreviewImg" src="" style="max-width:160px;max-height:100px;border-radius:6px;object-fit:cover;"></div></div>
           <div class="form-group"><label><input type="checkbox" id="camHot"> 设为热门</label></div>
           <button class="btn-primary" onclick="saveCamera()">保存</button> <button class="cancel-btn" onclick="hideCamForm()">取消</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>图</th><th>型号</th><th>优势</th><th>1天</th><th>2天</th><th>3天</th><th>5天</th><th>7天</th><th>热</th><th>操作</th></tr></thead><tbody id="camerasTable"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>图</th><th>型号</th><th>优势</th><th>1天</th><th>2天</th><th>3天</th><th>5天</th><th>7天</th><th>续</th><th>热</th><th>操作</th></tr></thead><tbody id="camerasTable"></tbody></table></div>
       </div>
 
       <!-- 内容审核 -->

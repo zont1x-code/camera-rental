@@ -35,7 +35,9 @@ app.get('/api/bookings', async (req, res) => {
     const { cameraId } = req.query;
     const rows = await query('SELECT startDate, endDate FROM bookings WHERE cameraId=? AND status NOT IN (?,?)', [parseInt(cameraId), 'cancelled', 'rejected']);
     const blocks = await query('SELECT startDate, endDate FROM camera_blocks WHERE cameraId=?', [parseInt(cameraId)]);
-    res.json([...rows, ...blocks]);
+    // 统一日期格式为 YYYY-MM-DD（MySQL DATE 列返回 JS Date 时区偏移问题）
+    const fmt = r => ({ startDate: r.startDate instanceof Date ? r.startDate.toISOString().slice(0,10) : String(r.startDate).slice(0,10), endDate: r.endDate instanceof Date ? r.endDate.toISOString().slice(0,10) : String(r.endDate).slice(0,10) });
+    res.json([...rows.map(fmt), ...blocks.map(fmt)]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -49,8 +51,18 @@ app.post('/api/bookings', async (req, res) => {
     const conflicts = await query('SELECT 1 FROM bookings WHERE cameraId=? AND status NOT IN (?,?) AND startDate<=? AND endDate>=?', [parseInt(cameraId), 'cancelled', 'rejected', endDate, startDate]);
     if (conflicts.length > 0) return res.status(409).json({ error: '该时间段已被预约' });
     const id = Date.now();
-    await run('INSERT INTO bookings (id,cameraId,startDate,endDate,name,school,remark,phone,status,createdAt) VALUES (?,?,?,?,?,?,?,?,?,NOW())', [id, parseInt(cameraId), startDate, endDate, name.trim(), school.trim(), (remark || '').trim(), phone.trim(), 'pending']);
-    res.status(201).json({ message: '预约成功！', booking: { id, cameraId: parseInt(cameraId), startDate, endDate, name: name.trim(), school: school.trim(), remark: (remark || '').trim(), phone: phone.trim(), status: 'pending' } });
+    // 计算金额
+    const cam = await get('SELECT * FROM cameras WHERE id=?', [parseInt(cameraId)]);
+    const days = Math.ceil((end - start) / 86400000) + 1;
+    let amount = 0;
+    if (days === 1) amount = cam.price1day;
+    else if (days === 2) amount = cam.price2day;
+    else if (days === 3 || days === 4) amount = (cam.price3dayPerDay || 0) * days;
+    else if (days === 5 || days === 6) amount = (cam.price5dayPerDay || 0) * days;
+    else if (days === 7) amount = cam.price7day || 0;
+
+    await run('INSERT INTO bookings (id,cameraId,startDate,endDate,name,school,remark,phone,status,amount,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())', [id, parseInt(cameraId), startDate, endDate, name.trim(), school.trim(), (remark || '').trim(), phone.trim(), 'pending', amount]);
+    res.status(201).json({ message: '预约成功！', booking: { id, cameraId: parseInt(cameraId), startDate, endDate, name: name.trim(), school: school.trim(), remark: (remark || '').trim(), phone: phone.trim(), status: 'pending', amount } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -75,13 +87,15 @@ app.get('/api/my-bookings', async (req, res) => {
 
 app.post('/api/renew', async (req, res) => {
   try {
-    const { orderId, newStartDate, newEndDate } = req.body;
-    if (!orderId || !newStartDate || !newEndDate) return res.status(400).json({ error: '缺少必填字段' });
-    const days = Math.ceil((new Date(newEndDate) - new Date(newStartDate)) / 86400000) + 1;
-    if (days > 7) return res.status(400).json({ error: '续约最多7天' });
+    const { orderId, newEndDate } = req.body;
+    if (!orderId || !newEndDate) return res.status(400).json({ error: '缺少必填字段' });
     const booking = await get('SELECT * FROM bookings WHERE id=?', [parseInt(orderId)]);
     if (!booking) return res.status(404).json({ error: '订单不存在' });
     if (!['confirmed', 'renting'].includes(booking.status)) return res.status(400).json({ error: '当前状态不支持续约' });
+    const newStartDate = booking.endDate; // 续约开始 = 原订单结束日期
+    if (newEndDate <= newStartDate) return res.status(400).json({ error: '续约结束日期必须晚于原订单结束日期' });
+    const days = Math.ceil((new Date(newEndDate) - new Date(newStartDate)) / 86400000) + 1;
+    if (days > 7) return res.status(400).json({ error: '续约最多7天' });
     const conflicts = await query('SELECT 1 FROM bookings WHERE cameraId=? AND id!=? AND status NOT IN (?,?) AND startDate<=? AND endDate>=?', [booking.cameraId, parseInt(orderId), 'cancelled', 'rejected', newEndDate, newStartDate]);
     if (conflicts.length > 0) return res.status(409).json({ error: '续约时间段已被预约' });
     await run('UPDATE bookings SET status=?, renewNewEndDate=?, renewStatus=? WHERE id=?', ['renew_pending', newEndDate, 'pending', parseInt(orderId)]);
@@ -252,9 +266,24 @@ app.get('/admin/api/bookings', async (req, res) => {
 
 app.put('/admin/api/bookings/:id', async (req, res) => {
   try {
-    const { status } = req.body;
-    if (status) await run('UPDATE bookings SET status=? WHERE id=?', [status, parseInt(req.params.id)]);
+    const { status, amount } = req.body;
+    if (status !== undefined) await run('UPDATE bookings SET status=? WHERE id=?', [status, parseInt(req.params.id)]);
+    if (amount !== undefined) await run('UPDATE bookings SET amount=? WHERE id=?', [parseInt(amount), parseInt(req.params.id)]);
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 收支统计
+app.get('/admin/api/revenue', async (req, res) => {
+  try {
+    const { date, month, year } = req.query;
+    let sql = '', params = [];
+    if (date) { sql = "SELECT COALESCE(SUM(amount),0) as total FROM bookings WHERE status IN ('confirmed','renting','completed') AND DATE(createdAt)=?"; params = [date]; }
+    else if (month) { sql = "SELECT COALESCE(SUM(amount),0) as total FROM bookings WHERE status IN ('confirmed','renting','completed') AND DATE_FORMAT(createdAt,'%Y-%m')=?"; params = [month]; }
+    else if (year) { sql = "SELECT COALESCE(SUM(amount),0) as total FROM bookings WHERE status IN ('confirmed','renting','completed') AND YEAR(createdAt)=?"; params = [year]; }
+    else return res.status(400).json({ error: '缺少参数' });
+    const [row] = await query(sql, params);
+    res.json({ total: row.total });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -425,7 +454,7 @@ app.put('/admin/api/users/:id/password', async (req, res) => {
 // ==================== ADMIN CAMERAS ====================
 app.post('/admin/api/cameras', upload.single('photo'), async (req, res) => {
   try {
-    const { model, advantage, detail, price1day, price2day, price3dayPerDay, price5dayPerDay, price7day, hot } = req.body;
+    const { model, advantage, detail, price1day, price2day, price3dayPerDay, price5dayPerDay, price7day, renewPrice, hot } = req.body;
     if (!model || !advantage) return res.status(400).json({ error: '型号和优势为必填' });
     let image = req.file ? '/uploads/' + req.file.filename : (req.body.image || '').trim();
     await run('INSERT INTO cameras (model,advantage,detail,image,price1day,price2day,price3dayPerDay,price5dayPerDay,price7day,hot) VALUES (?,?,?,?,?,?,?,?,?,?)', [model.trim(), advantage.trim(), (detail || '').trim(), image, parseInt(price1day) || 0, parseInt(price2day) || 0, parseInt(price3dayPerDay) || 0, parseInt(price5dayPerDay) || 0, parseInt(price7day) || 0, hot === 'true' || hot === true ? 1 : 0]);
@@ -434,7 +463,7 @@ app.post('/admin/api/cameras', upload.single('photo'), async (req, res) => {
 });
 app.put('/admin/api/cameras/:id', upload.single('photo'), async (req, res) => {
   try {
-    const { model, advantage, detail, price1day, price2day, price3dayPerDay, price5dayPerDay, price7day, hot } = req.body;
+    const { model, advantage, detail, price1day, price2day, price3dayPerDay, price5dayPerDay, price7day, renewPrice, hot } = req.body;
     const cam = await get('SELECT * FROM cameras WHERE id=?', [parseInt(req.params.id)]);
     if (!cam) return res.status(404).json({ error: '不存在' });
     let image = cam.image;
@@ -449,7 +478,8 @@ app.get('/admin/api/blocks', async (req, res) => {
   try {
     const { cameraId } = req.query;
     const blocks = cameraId ? await query('SELECT * FROM camera_blocks WHERE cameraId=? ORDER BY startDate', [parseInt(cameraId)]) : await query('SELECT * FROM camera_blocks ORDER BY startDate');
-    res.json(blocks);
+    const fm = r => ({ ...r, startDate: r.startDate instanceof Date ? r.startDate.toISOString().slice(0,10) : String(r.startDate).slice(0,10), endDate: r.endDate instanceof Date ? r.endDate.toISOString().slice(0,10) : String(r.endDate).slice(0,10) });
+    res.json(blocks.map(fm));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/admin/api/blocks', async (req, res) => {

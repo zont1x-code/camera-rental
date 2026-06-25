@@ -27,7 +27,10 @@ function esc(str) {
 function fmtDate(iso) {
   if (!iso) return '-';
   var d = new Date(iso);
-  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  // UTC+8 本地时间 格式：2026-06-10 16:00:00
+  var y = d.getFullYear(), m = pad(d.getMonth() + 1), day = pad(d.getDate());
+  var h = pad(d.getHours()), min = pad(d.getMinutes()), s = pad(d.getSeconds());
+  return y + '-' + m + '-' + day + ' ' + h + ':' + min + ':' + s;
 }
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -70,11 +73,37 @@ async function loadBookings(status) {
 }
 
 function updateStats(){
-  var today=new Date().toISOString().split('T')[0];
-  document.getElementById('statPending').textContent=allBookings.filter(function(b){return b.status==='pending'||b.status==='renew_pending'}).length;
-  document.getElementById('statRenting').textContent=allBookings.filter(function(b){return b.status==='renting'}).length;
-  document.getElementById('statToday').textContent=allBookings.filter(function(b){return b.startDate===today}).length;
+  document.getElementById('statPending').textContent = allBookings.filter(function(b){return b.status==='pending'||b.status==='renew_pending'}).length;
+  document.getElementById('statRenting').textContent = allBookings.filter(function(b){return b.status==='renting'}).length;
 }
+
+async function updateAmount(id, val) {
+  try { await api('/admin/api/bookings/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: parseInt(val) || 0 }) }); loadRevenue('date'); }
+  catch (e) { alert(e.message); }
+}
+
+async function loadRevenue(type) {
+  var url = '/admin/api/revenue?';
+  if (type === 'date') { var d = document.getElementById('revenueDate').value; if (!d) return; url += 'date=' + d; }
+  else if (type === 'month') { var m = document.getElementById('revenueMonth').value; if (!m) return; url += 'month=' + m; }
+  else if (type === 'year') { var y = document.getElementById('revenueYear').value; if (!y) return; url += 'year=' + y; }
+  else return;
+  var data = await api(url);
+  document.getElementById('statRevenue').textContent = '¥' + data.total;
+}
+// 初始化月份/年份下拉
+(function() {
+  var now = new Date();
+  var ms = document.getElementById('revenueMonth');
+  if (!ms) return;
+  for (var i = 1; i <= 12; i++) ms.innerHTML += '<option value="' + now.getFullYear() + '-' + (i < 10 ? '0' : '') + i + '">' + i + '月</option>';
+  ms.onchange = function() { loadRevenue(this.value ? 'month' : ''); };
+  var ry = document.getElementById('revenueYear');
+  ry.innerHTML = '<option value="">年份</option>' + Array.from({ length: 5 }, function(_, i) { return '<option value="' + (now.getFullYear() - i) + '">' + (now.getFullYear() - i) + '</option>'; }).join('');
+  ry.onchange = function() { loadRevenue(this.value ? 'year' : ''); };
+  var rd = document.getElementById('revenueDate');
+  rd.value = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+})();
 
 function doSearch(){
   var q=document.getElementById('searchInput').value.trim().toLowerCase();
@@ -115,6 +144,8 @@ function renderBookingsTable(bookings) {
       '<td>' + esc(b.school) + '</td>' +
       '<td>' + b.startDate + '</td>' +
       '<td>' + b.endDate + '</td>' +
+      '<td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(b.remark || '') + '">' + esc(b.remark || '') + '</td>' +
+      '<td><input type="number" value="' + (b.amount || 0) + '" style="width:70px;padding:2px 4px;font-size:12px;" onchange="updateAmount(' + b.id + ',this.value)" onclick="this.select()"></td>' +
       '<td><select onchange="changeStatus(' + b.id + ', this.value)">' + statusOpts + '</select></td>' +
       '<td>' + renewHTML + '</td>' +
       '<td><button class="delete-btn" onclick="deleteBooking(' + b.id + ')">删除</button></td>' +
@@ -122,16 +153,19 @@ function renderBookingsTable(bookings) {
   });
 }
 
-async function changeStatus(id, status) {
+var STATUS_ORDER = ['pending', 'confirmed', 'renting', 'completed'];
+async function changeStatus(id, newStatus) {
+  var b = allBookings.find(function(x) { return x.id === id; });
+  var oldIdx = b ? STATUS_ORDER.indexOf(b.status) : -1, newIdx = STATUS_ORDER.indexOf(newStatus);
+  if (newIdx >= 0 && oldIdx > newIdx) {
+    var pwd = prompt('🔒 逆向状态变更（' + (b ? b.status : '?') + '→' + newStatus + '），请输入密码：');
+    if (pwd !== '20060419') { alert('密码错误，操作已取消'); return; }
+  }
   try {
-    await api('/admin/api/bookings/' + id, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: status })
-    });
-    logAction('改状态','订单#'+id,status);
+    await api('/admin/api/bookings/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+    logAction('改状态', '订单#' + id, b ? b.status + '→' + newStatus : newStatus);
     loadBookings(document.getElementById('statusFilter').value);
-    logAction('改状态', '订单ID:'+id, '→'+status);
+    loadRevenue('date');
   } catch (e) { alert(e.message); }
 }
 
@@ -441,6 +475,8 @@ async function savePrivacy() {
 var adminCalYear, adminCalMonth, adminCalBookings = {}, adminCalBlocks = {}, adminCalCameraId = null;
 
 async function loadCalendarTab() {
+  var note = localStorage.getItem('calNote');
+  if (note) { var el = document.getElementById('calNote'); if (el) el.value = note; }
   var sel = document.getElementById('calCameraFilter');
   var cameras = await api('/api/cameras');
   sel.innerHTML = '<option value="">选择机型...</option>' +
@@ -463,21 +499,29 @@ async function loadAdminCalendar() {
     var data = await api('/api/bookings?cameraId=' + adminCalCameraId);
     var blocks = await api('/admin/api/blocks?cameraId=' + adminCalCameraId);
     adminCalBookings = {}; adminCalBlocks = {};
-    data.forEach(function(b) {
-      var s = new Date(b.startDate), e = new Date(b.endDate), cur = new Date(s);
-      while (cur <= e) {
-        var key = cur.getFullYear() + '-' + pad(cur.getMonth()+1) + '-' + pad(cur.getDate());
+    // 从 YYYY-MM-DD 解析为本地日期组 [y,m,d]
+  function parseYMD(str) { var s = str.slice(0,10); var p = s.split('-'); return [parseInt(p[0]), parseInt(p[1]), parseInt(p[2])]; }
+  data.forEach(function(b) {
+      var s = parseYMD(b.startDate), e = parseYMD(b.endDate);
+      var curY = s[0], curM = s[1], curD = s[2];
+      var endY = e[0], endM = e[1], endD = e[2];
+      while (curY < endY || (curY === endY && curM < endM) || (curY === endY && curM === endM && curD <= endD)) {
+        var key = curY + '-' + pad(curM) + '-' + pad(curD);
         adminCalBookings[key] = adminCalBookings[key] || [];
         adminCalBookings[key].push(b.name||b.phone+'');
-        cur.setDate(cur.getDate() + 1);
+        curD++;
+        if (curD > new Date(curY, curM, 0).getDate()) { curD = 1; curM++; if (curM > 12) { curM = 1; curY++; } }
       }
     });
     blocks.forEach(function(b) {
-      var s = new Date(b.startDate), e = new Date(b.endDate), cur = new Date(s);
-      while (cur <= e) {
-        var key = cur.getFullYear() + '-' + pad(cur.getMonth()+1) + '-' + pad(cur.getDate());
+      var s = parseYMD(b.startDate), e = parseYMD(b.endDate);
+      var curY = s[0], curM = s[1], curD = s[2];
+      var endY = e[0], endM = e[1], endD = e[2];
+      while (curY < endY || (curY === endY && curM < endM) || (curY === endY && curM === endM && curD <= endD)) {
+        var key = curY + '-' + pad(curM) + '-' + pad(curD);
         adminCalBlocks[key] = { id: b.id, type: b.blockType || 'buffer' };
-        cur.setDate(cur.getDate() + 1);
+        curD++;
+        if (curD > new Date(curY, curM, 0).getDate()) { curD = 1; curM++; if (curM > 12) { curM = 1; curY++; } }
       }
     });
   } catch(e) { adminCalBookings = {}; adminCalBlocks = {}; }
@@ -494,10 +538,8 @@ function calDayClick(e){
       api('/admin/api/blocks/'+blk.id,{method:'DELETE'}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)});
     }
   } else if(!adminCalBookings[dsv]){
-    var type=prompt('选择封锁类型：\n1 - 🟢 缓冲期（寄送/维护两天）\n2 - 🔵 管理员预留（超7天租聘）\n\n输入 1 或 2','1');
-    if(type==='1'||type==='2'){
-      api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:dsv,endDate:dsv,blockType:type==='2'?'admin':'buffer'})}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)});
-    }
+    var bt = document.getElementById('calBlockType').value || 'buffer';
+    api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:dsv,endDate:dsv,blockType:bt})}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)})
   }
 }
 
@@ -543,9 +585,9 @@ async function loadCamerasTab(){adminCameras=await api('/api/cameras');renderCam
 function renderCamTable(){
   var tbody=document.getElementById('camerasTable');
   if(!adminCameras.length){tbody.innerHTML='<tr><td colspan="10" style="color:#999;text-align:center;">暂无机型</td></tr>';return}
-  tbody.innerHTML=adminCameras.map(function(c){return '<tr><td><img src="'+c.image+'" style="width:50px;height:35px;object-fit:cover;border-radius:4px;"></td><td>'+esc(c.model)+'</td><td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;">'+esc(c.advantage)+'</td><td>'+c.price1day+'</td><td>'+c.price2day+'</td><td>'+c.price3dayPerDay+'</td><td>'+(c.price5dayPerDay||0)+'</td><td>'+(c.price7day||0)+'</td><td>'+(c.hot?'':'')+'</td><td><button class="delete-btn" style="margin-right:4px;" onclick="editCam('+c.id+')">编辑</button><button class="delete-btn" onclick="deleteCam('+c.id+')">删除</button></td></tr>'}).join('')}
+  tbody.innerHTML=adminCameras.map(function(c){return '<tr><td><img src="'+c.image+'" style="width:50px;height:35px;object-fit:cover;border-radius:4px;"></td><td>'+esc(c.model)+'</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;">'+esc(c.advantage)+'</td><td>'+c.price1day+'</td><td>'+c.price2day+'</td><td>'+c.price3dayPerDay+'</td><td>'+(c.price5dayPerDay||0)+'</td><td>'+(c.price7day||0)+'</td><td>'+(c.renewPrice||0)+'</td><td>'+(c.hot?'':'')+'</td><td><button class="delete-btn" style="margin-right:4px;" onclick="editCam('+c.id+')">编辑</button><button class="delete-btn" onclick="deleteCam('+c.id+')">删除</button></td></tr>'}).join('')}
 
-function showCamForm(cam){camPhotoFile=null;document.getElementById('camPhotoFile').value='';document.getElementById('camPhotoPreview').style.display='none';if(cam){document.getElementById('camId').value=cam.id;document.getElementById('camModel').value=cam.model;document.getElementById('camAdvantage').value=cam.advantage;document.getElementById('camDetail').value=cam.detail||'';document.getElementById('camImageUrl').value=cam.image||'';document.getElementById('camPrice1').value=cam.price1day;document.getElementById('camPrice2').value=cam.price2day;document.getElementById('camPrice3').value=cam.price3dayPerDay;document.getElementById('camPrice5').value=cam.price5dayPerDay||'';document.getElementById('camPrice7').value=cam.price7day||'';document.getElementById('camHot').checked=cam.hot===true;document.getElementById('camFormTitle').textContent='编辑机型';if(cam.image){document.getElementById('camPhotoPreviewImg').src=cam.image;document.getElementById('camPhotoPreview').style.display=''}}else{document.getElementById('camId').value='';document.getElementById('camModel').value='';document.getElementById('camAdvantage').value='';document.getElementById('camDetail').value='';document.getElementById('camImageUrl').value='';document.getElementById('camPrice1').value='';document.getElementById('camPrice2').value='';document.getElementById('camPrice3').value='';document.getElementById('camPrice5').value='';document.getElementById('camPrice7').value='';document.getElementById('camHot').checked=false;document.getElementById('camFormTitle').textContent='新增机型'}document.getElementById('camForm').style.display='block';document.getElementById('camForm').scrollIntoView({behavior:'smooth'})}
+function showCamForm(cam){camPhotoFile=null;document.getElementById('camPhotoFile').value='';document.getElementById('camPhotoPreview').style.display='none';if(cam){document.getElementById('camId').value=cam.id;document.getElementById('camModel').value=cam.model;document.getElementById('camAdvantage').value=cam.advantage;document.getElementById('camDetail').value=cam.detail||'';document.getElementById('camImageUrl').value=cam.image||'';document.getElementById('camPrice1').value=cam.price1day;document.getElementById('camPrice2').value=cam.price2day;document.getElementById('camPrice3').value=cam.price3dayPerDay;document.getElementById('camPrice5').value=cam.price5dayPerDay||'';document.getElementById('camPrice7').value=cam.price7day||'';document.getElementById('camRenewPrice').value=cam.renewPrice||'';document.getElementById('camHot').checked=cam.hot===true;document.getElementById('camFormTitle').textContent='编辑机型';if(cam.image){document.getElementById('camPhotoPreviewImg').src=cam.image;document.getElementById('camPhotoPreview').style.display=''}}else{document.getElementById('camId').value='';document.getElementById('camModel').value='';document.getElementById('camAdvantage').value='';document.getElementById('camDetail').value='';document.getElementById('camImageUrl').value='';document.getElementById('camPrice1').value='';document.getElementById('camPrice2').value='';document.getElementById('camPrice3').value='';document.getElementById('camPrice5').value='';document.getElementById('camPrice7').value='';document.getElementById('camRenewPrice').value='';document.getElementById('camHot').checked=false;document.getElementById('camFormTitle').textContent='新增机型'}document.getElementById('camForm').style.display='block';document.getElementById('camForm').scrollIntoView({behavior:'smooth'})}
 
 async function editCam(id){var c=adminCameras.find(function(cc){return cc.id===id});if(c)showCamForm(c)}
 
@@ -556,8 +598,8 @@ async function saveCamera(){
   var id=document.getElementById('camId').value,url=id?'/admin/api/cameras/'+id:'/admin/api/cameras',method=id?'PUT':'POST';
   try{
     var res;
-    if(camPhotoFile){var fd=new FormData();fd.append('photo',camPhotoFile);fd.append('model',document.getElementById('camModel').value);fd.append('advantage',document.getElementById('camAdvantage').value);fd.append('detail',document.getElementById('camDetail').value);fd.append('price1day',document.getElementById('camPrice1').value);fd.append('price2day',document.getElementById('camPrice2').value);fd.append('price3dayPerDay',document.getElementById('camPrice3').value);fd.append('price5dayPerDay',document.getElementById('camPrice5').value);fd.append('price7day',document.getElementById('camPrice7').value);fd.append('hot',document.getElementById('camHot').checked);res=await fetch(url,{method:method,body:fd})}
-    else{res=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:document.getElementById('camModel').value,advantage:document.getElementById('camAdvantage').value,detail:document.getElementById('camDetail').value,image:document.getElementById('camImageUrl').value,price1day:document.getElementById('camPrice1').value,price2day:document.getElementById('camPrice2').value,price3dayPerDay:document.getElementById('camPrice3').value,price5dayPerDay:document.getElementById('camPrice5').value,price7day:document.getElementById('camPrice7').value,hot:document.getElementById('camHot').checked})})}
+    if(camPhotoFile){var fd=new FormData();fd.append('photo',camPhotoFile);fd.append('model',document.getElementById('camModel').value);fd.append('advantage',document.getElementById('camAdvantage').value);fd.append('detail',document.getElementById('camDetail').value);fd.append('price1day',document.getElementById('camPrice1').value);fd.append('price2day',document.getElementById('camPrice2').value);fd.append('price3dayPerDay',document.getElementById('camPrice3').value);fd.append('price5dayPerDay',document.getElementById('camPrice5').value);fd.append('price7day',document.getElementById('camPrice7').value);fd.append('renewPrice',document.getElementById('camRenewPrice').value);fd.append('hot',document.getElementById('camHot').checked);res=await fetch(url,{method:method,body:fd})}
+    else{res=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify({model:document.getElementById('camModel').value,advantage:document.getElementById('camAdvantage').value,detail:document.getElementById('camDetail').value,image:document.getElementById('camImageUrl').value,price1day:document.getElementById('camPrice1').value,price2day:document.getElementById('camPrice2').value,price3dayPerDay:document.getElementById('camPrice3').value,price5dayPerDay:document.getElementById('camPrice5').value,price7day:document.getElementById('camPrice7').value,renewPrice:document.getElementById('camRenewPrice').value,hot:document.getElementById('camHot').checked})})}
     if(!res.ok){var d=await res.json().catch(function(){return{}});throw new Error(d.error||'保存失败')}
     hideCamForm();loadCamerasTab()
   }catch(e){alert(e.message)}

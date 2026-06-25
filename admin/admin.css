@@ -102,7 +102,7 @@ tr.row-overdue{background:#fff0f0;border-left:3px solid #e74c3c}
 .calendar-day.blocked-green::after{content:'';position:absolute;top:50%;left:15%;right:15%;height:1.5px;background:#16a34a;transform:rotate(-30deg);opacity:.5}
 .calendar-day.blocked-blue{background:rgba(0,128,255,.08);color:#999;position:relative}
 .calendar-day.blocked-blue::after{content:'';position:absolute;top:50%;left:15%;right:15%;height:1.5px;background:#007aff;transform:rotate(-30deg);opacity:.5}
-.calendar-day.blocked-date{color:#ccc;position:relative;background:rgba(231,76,60,.08)}
-.calendar-day.blocked-date::after{content:'';position:absolute;top:50%;left:15%;right:15%;height:1.5px;background:#e74c3c;transform:rotate(-30deg);opacity:.5}
+.calendar-day.booked-date{color:red;position:relative;font-weight:700}
+.calendar-day.booked-date::after{content:'';position:absolute;top:50%;left:10%;right:10%;height:2px;background:#e74c3c;transform:rotate(-30deg);opacity:.9}
 
 @media(max-width:768px){.admin-sidebar{display:none}.admin-main{margin-left:0;padding:16px}.stats-row{flex-direction:column}}

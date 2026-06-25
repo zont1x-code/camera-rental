@@ -64,7 +64,7 @@ setInterval(function(){fetch('/admin/api/heartbeat',{method:'POST',headers:{'Con
 
 function api(url,opts){return fetch(url,opts||{}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'请求失败');return d})})}
 function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
-function fmtDate(iso){var d=new Date(iso);return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0')+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')}
+function fmtDate(iso){if(!iso)return'-';var d=new Date(iso);return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0')+' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0')}
 
 document.querySelectorAll('.supervisor-sidebar .nav-btn').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.nav-btn').forEach(function(x){x.classList.remove('active')});b.classList.add('active');document.querySelectorAll('.tab-content').forEach(function(x){x.classList.remove('active')});document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='sessions')loadSessions();if(b.dataset.tab==='log')loadLog();if(b.dataset.tab==='admins')loadAdmins()})});
 
