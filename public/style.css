@@ -620,10 +620,13 @@ body.hero-page{padding-bottom:0}
   .success-icon svg{width:34px;height:34px}
 }
 @media(max-width:640px){
-  .tab-bar-item{padding:4px 18px;min-width:60px}
+  .tab-bar{justify-content:space-around}
+  .tab-bar-item{padding:4px 6px;min-width:auto;flex:1}
   .tab-bar-item svg{width:22px;height:22px}
-  .tab-bar-item .tab-label{font-size:.6rem}
-  .container{padding:0 14px}
+  .tab-bar-item .tab-label{font-size:.55rem}
+  .container{padding:56px 14px 0}
+  .page-header{padding:8px 14px}
+  .page-header .logo{font-size:16px}
   .hero{padding:40px 0 52px}
   .hero h1{font-size:clamp(28px,7vw,38px);line-height:1.1}
   .hero .hero-sub{font-size:14px;max-width:300px;margin-bottom:24px}
