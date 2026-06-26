@@ -185,7 +185,7 @@
     function scrollToSection(name,btn){
       document.querySelectorAll('.discover-section').forEach(function(s){s.classList.remove('active')});
       var el=document.querySelector('.discover-section[data-section-name="'+name+'"]');
-      if(el){el.classList.add('active');el.scrollIntoView({behavior:'smooth',block:'start'})}
+      if(el){el.classList.add('active');window.scrollTo({top:0,behavior:'smooth'})}
       document.querySelectorAll('.subnav-btn').forEach(function(b){b.classList.remove('active')});
       if(btn)btn.classList.add('active');
       if(name==='gallery')loadCameraGallery();

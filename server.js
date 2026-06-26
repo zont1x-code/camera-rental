@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
-app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), { setHeaders: function(res, filePath) { if (filePath.endsWith('.pdf')) { res.setHeader('Content-Type', 'application/pdf'); res.setHeader('Content-Disposition', 'inline'); } } }));
 
 // uploads dir
 const uploadDir = path.join(__dirname, 'public', 'uploads');
@@ -24,6 +24,30 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (req, file, cb) => file.mimetype.startsWith('image/') ? cb(null, true) : cb(new Error('Only images')) });
+
+// 日期格式化
+function fmtDate(d) {
+  if (!d) return '';
+  var dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt.getTime())) return String(d).slice(0, 19).replace('T', ' ');
+  var y = dt.getFullYear(), m = String(dt.getMonth() + 1).padStart(2, '0'), day = String(dt.getDate()).padStart(2, '0');
+  var h = String(dt.getHours()).padStart(2, '0'), min = String(dt.getMinutes()).padStart(2, '0'), s = String(dt.getSeconds()).padStart(2, '0');
+  return y + '-' + m + '-' + day + ' ' + h + ':' + min + ':' + s;
+}
+function fmtBookings(rows) {
+  return rows.map(function(b) {
+    b.startDate = fmtDateOnly(b.startDate);
+    b.endDate = fmtDateOnly(b.endDate);
+    b.createdAt = fmtDate(b.createdAt);
+    return b;
+  });
+}
+function fmtDateOnly(d) {
+  if (!d) return '';
+  var dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt.getTime())) return String(d).slice(0, 10);
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+}
 
 // ==================== PUBLIC API ====================
 app.get('/api/cameras', async (req, res) => {
@@ -81,7 +105,7 @@ app.get('/api/my-bookings', async (req, res) => {
     const { phone } = req.query;
     if (!phone) return res.status(400).json({ error: '缺少手机号' });
     const rows = await query('SELECT b.*, c.model as cameraModel FROM bookings b LEFT JOIN cameras c ON b.cameraId=c.id WHERE b.phone=? ORDER BY b.createdAt DESC', [phone]);
-    res.json(rows);
+    res.json(fmtBookings(rows));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -260,7 +284,7 @@ app.get('/admin/api/bookings', async (req, res) => {
     if (status) { sql += ' AND b.status=?'; params.push(status); }
     if (exclude) { const ex = exclude.split(','); sql += ' AND b.status NOT IN (?' + ',?'.repeat(ex.length - 1) + ')'; params.push(...ex); }
     sql += ' ORDER BY b.startDate ASC';
-    res.json(await query(sql, params));
+    res.json(fmtBookings(await query(sql, params)));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -350,6 +374,13 @@ app.delete('/admin/api/announcements/:id', async (req, res) => {
 // ==================== ADMIN PRIVACY ====================
 app.get('/admin/api/privacy', async (req, res) => {
   try { const row = await get('SELECT content FROM privacy WHERE id=1'); res.json(row || { content: '' }); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/contract/file', async (req, res) => {
+  try {
+    const row = await get('SELECT file FROM contract WHERE id=1');
+    if (!row || !row.file) return res.status(404).send('暂无合同文件');
+    res.redirect(row.file);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.get('/api/contract', async (req, res) => {
   try { const row = await get('SELECT * FROM contract WHERE id=1'); res.json(row || {}); } catch (e) { res.status(500).json({ error: e.message }); }

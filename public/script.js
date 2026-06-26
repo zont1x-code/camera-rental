@@ -45,7 +45,7 @@ function updateHeaderUser(){var area=document.querySelector('.user-area');if(are
 
 // ====== 图片灯箱 ======
 document.addEventListener('click',function(e){
-  var img=e.target.closest('.gallery img,.post-card img,.camera-detail-item img');
+  var img=e.target.closest('.gallery img,.post-card img,.camera-detail-item img,.gallery-photo-item img');
   if(!img||!img.src||img.src.startsWith('data:'))return;
   var overlay=document.createElement('div');overlay.className='lightbox-overlay';
   var close=document.createElement('button');close.className='lightbox-close';close.innerHTML='&times;';

@@ -647,9 +647,9 @@ body.hero-page{padding-bottom:0}
   .date-info{padding:14px 16px;font-size:13px}
   .price-display{font-size:20px}
   .form-group input,.form-group textarea{padding:10px 12px;font-size:15px}
-  .posts-grid{grid-template-columns:1fr;gap:12px}
-  .post-card .post-img-wrap{height:220px}
-  .gallery{grid-template-columns:1fr;gap:8px}
+  .posts-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .post-card .post-img-wrap{height:160px}
+  .gallery{grid-template-columns:1fr 1fr;gap:6px}
   .booking-item{padding:16px;gap:12px;border-radius:var(--radius-md)}
   .booking-info strong{font-size:14px}
   .booking-list{gap:10px}
@@ -679,6 +679,19 @@ body.hero-page{padding-bottom:0}
   .booking-wizard .calendar-day.range-end{border-radius:0 8px 8px 0}
   .booking-wizard .calendar-day.range-single{border-radius:8px}
   .booking-wizard .calendar-day.in-range{background:rgba(0,128,255,.15);border-radius:0}
+}
+/* 机型实拍画廊 */
+.gallery-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.gallery-photos .gallery-photo-item{aspect-ratio:1;overflow:hidden;border-radius:4px;background:var(--bg-dark);cursor:zoom-in}
+.gallery-photos .gallery-photo-item img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.gallery-photos .gallery-photo-item:hover img{transform:scale(1.05)}
+.gallery-more{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:rgba(0,128,255,.04);border-radius:4px;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500}
+.gallery-desc{font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+@media(max-width:860px){
+  .camera-gallery-card{padding:14px;margin-bottom:10px}
+  .gallery-photos{gap:3px}
+  .gallery-photos .gallery-photo-item{border-radius:3px}
+  .gallery-desc{font-size:12px;margin-bottom:10px}
 }
 .order-summary{background:var(--bg-white);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px}
 .order-summary .os-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--ink2)}

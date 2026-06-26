@@ -17,7 +17,7 @@
         <button class="sidebar-btn" data-tab="archive">库存数据</button>
         <div class="sidebar-divider"></div>
         <button class="sidebar-btn" data-tab="cameras">机型管理</button>
-        <button class="sidebar-btn" data-tab="review">内容审核</button>
+        <button class="sidebar-btn" data-tab="review">内容审核<span class="badge" id="reviewBadge"></span></button>
         <button class="sidebar-btn" data-tab="users">用户管理</button>
         <div class="sidebar-divider"></div>
         <div class="sidebar-parent">
@@ -61,7 +61,7 @@
           </select>
           <button class="btn-primary" onclick="exportCSV()">导出 CSV</button>
         </div>
-        <div class="table-wrap"><table><thead><tr><th>ID</th><th>机型</th><th>预约人</th><th>手机号</th><th>地址/学校</th><th>起始</th><th>结束</th><th>备注</th><th>金额</th><th>状态</th><th>续约</th><th>操作</th></tr></thead><tbody id="bookingsTable"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>ID</th><th>机型</th><th>预约人</th><th>手机号</th><th>地址/学校</th><th>起始</th><th>结束</th><th>备注</th><th>金额</th><th>提交时间</th><th>状态</th><th>续约</th><th>操作</th></tr></thead><tbody id="bookingsTable"></tbody></table></div>
         <div class="legend">提醒：<span class="leg-item leg-renew">续约待审</span><span class="leg-item leg-overdue">过期未还</span><span class="leg-item leg-today">今日开始</span><span class="leg-item leg-tomorrow">明日开始</span></div>
       </div>
 

@@ -17,6 +17,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;backg
 .sidebar-parent.open .sidebar-sub{display:block}
 .sidebar-parent .parent-toggle{font-size:.82rem;opacity:.8}
 .sidebar-sub .sub-btn{padding:8px 20px 8px 24px;font-size:.8rem}
+.sidebar-btn{position:relative}
+.badge{position:absolute;top:6px;right:10px;min-width:18px;height:18px;background:#e74c3c;color:#fff;border-radius:9px;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 5px;line-height:18px}
 
 .sidebar-parent .parent-toggle{font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:#888}
 .sidebar-sub{display:none;padding-left:0}

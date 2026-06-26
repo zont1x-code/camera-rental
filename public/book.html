@@ -39,7 +39,7 @@
             <div class="form-group"><label for="name">姓名<span class="required">*</span></label><input type="text" id="name" placeholder="请输入姓名" required></div>
             <div class="form-group"><label for="school">地址/学校<span class="required">*</span></label><input type="text" id="school" placeholder="请输入地址/学校" required></div>
             <div class="form-group"><label for="remark">备注</label><textarea id="remark" rows="2" placeholder="选填，如镜头偏好、取机时间等"></textarea></div>
-            <div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0 16px;"><input type="checkbox" id="agreeContract" style="margin-top:2px;"><label for="agreeContract" style="font-size:12px;color:var(--muted);line-height:1.4;">我已阅读并同意<a href="javascript:void(0)" class="contract-link" style="color:var(--accent);cursor:pointer;">租赁合同协议</a></label></div>
+            <div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0 16px;"><input type="checkbox" id="agreeContract" style="margin-top:2px;"><label for="agreeContract" style="font-size:12px;color:var(--muted);line-height:1.4;">我已阅读并同意<a href="/contract-view.html" target="_blank" style="color:var(--accent);">租赁合同协议</a></label></div>
             <button type="submit" class="submit-btn">提交预约</button>
           </form>
         </section>
@@ -64,7 +64,7 @@
         <div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
         <div id="mwCalendarGrid" class="calendar-grid"></div>
       </div>
-      <div class="date-info"><p>已选：<span id="mwSelectedRange">-</span></p><p class="price-display" id="mwPriceDisplay"></p></div>
+      <div class="date-info"><p>已选：<span id="mwSelectedRange">-</span> <button id="mwClearBtn" onclick="mwClearDate()" style="display:none;background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;">重选</button></p><p class="price-display" id="mwPriceDisplay"></p></div>
       <div class="step-btn-row" style="display:flex;gap:10px;margin-top:14px;"><button class="btn btn-outline" style="flex:1;padding:10px;text-align:center;" onclick="mwGoStep(1)">上一步</button><button class="btn btn-primary" style="flex:3;padding:10px;" onclick="mwGoStep(3)" disabled id="mwNext2">下一步</button></div>
     </div>
     <div id="mwStep3" class="wiz-step">
@@ -74,7 +74,7 @@
         <div class="form-group"><label>姓名<span class="required">*</span></label><input type="text" id="mwName" placeholder="请输入姓名" required></div>
         <div class="form-group"><label>地址/学校<span class="required">*</span></label><input type="text" id="mwSchool" placeholder="请输入地址/学校" required></div>
         <div class="form-group"><label>备注</label><textarea id="mwRemark" rows="2" placeholder="选填"></textarea></div>
-        <div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0 16px;"><input type="checkbox" id="agreeContract" style="margin-top:2px;"><label for="agreeContract" style="font-size:12px;color:var(--muted);line-height:1.4;">我已阅读并同意<a href="javascript:void(0)" class="contract-link" style="color:var(--accent);cursor:pointer;">租赁合同协议</a></label></div>
+        <div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0 16px;"><input type="checkbox" id="agreeContract" style="margin-top:2px;"><label for="agreeContract" style="font-size:12px;color:var(--muted);line-height:1.4;">我已阅读并同意<a href="/contract-view.html" target="_blank" style="color:var(--accent);">租赁合同协议</a></label></div>
         <div style="display:flex;gap:10px;"><button class="btn btn-outline" style="flex:1;padding:10px;text-align:center;" onclick="mwGoStep(2)">上一步</button><button type="submit" class="btn btn-primary" style="flex:3;padding:10px;">提交预约</button></div>
       </form>
     </div>
@@ -136,10 +136,11 @@
       var dd=getDisabledDates(),html='';for(var i=0;i<off;i++)html+='<div class="calendar-day empty"></div>';
       for(var day=1;day<=total;day++){var dsv=ds(mwYear,mwMonth,day),past=dsv<today,disabled=dd[dsv]||past;var cls='calendar-day';if(disabled)cls+=' disabled';if(dsv===today)cls+=' today';if(selectedStart&&selectedEnd&&dsv>=selectedStart&&dsv<=selectedEnd){cls+=' selected';if(dsv===selectedStart&&dsv===selectedEnd)cls+=' range-single';else if(dsv===selectedStart)cls+=' range-start';else if(dsv===selectedEnd)cls+=' range-end';else cls+=' in-range'}else if(selectedStart&&dsv===selectedStart)cls+=' selected range-single';html+='<div class="'+cls+'" data-date="'+dsv+'">'+day+'</div>'}
       document.getElementById('mwCalendarGrid').innerHTML=html;
-      document.querySelectorAll('#mwCalendarGrid .calendar-day:not(.disabled):not(.empty)').forEach(function(el){el.addEventListener('click',function(){var dsv=el.dataset.date;if(!selectedStart||(selectedStart&&selectedEnd)){selectedStart=dsv;selectedEnd=null}else{if(dsv<selectedStart){selectedStart=dsv;selectedEnd=null}else{var days=db(selectedStart,dsv)+1;if(days>7){showToast('最多7天','error');return}var dd2=getDisabledDates(),s2=pd(selectedStart),e2=pd(dsv),cur2=new Date(s2);while(cur2<=e2){if(dd2[ds(cur2.getFullYear(),cur2.getMonth(),cur2.getDate())]){showToast('所选区间包含已预约日期','error');return}cur2.setDate(cur2.getDate()+1)}selectedEnd=dsv}}mwRenderCal();mwUpdateDateInfo()})});
+      document.querySelectorAll('#mwCalendarGrid .calendar-day:not(.disabled):not(.empty)').forEach(function(el){el.addEventListener('click',function(){var dsv=el.dataset.date;if(!selectedStart||(selectedStart&&selectedEnd)){selectedStart=dsv;selectedEnd=null}else{if(dsv<selectedStart){selectedStart=dsv;selectedEnd=null}else{var days=db(selectedStart,dsv)+1;if(days>7){showToast('最多7天','error');return}var dd2=getDisabledDates(),s2=pd(selectedStart),e2=pd(dsv),cur2=new Date(s2);while(cur2<=e2){if(dd2[ds(cur2.getFullYear(),cur2.getMonth(),cur2.getDate())]){showToast('所选区间包含已预约日期','error');return}cur2.setDate(cur2.getDate()+1)}selectedEnd=dsv}}mwRenderCal();mwUpdateDateInfo();setTimeout(function(){var el2=document.querySelector('#mwCalendarGrid .calendar-day[data-date=\"'+dsv+'\"]');if(el2){el2.style.transform='scale(1.4)';setTimeout(function(){el2.style.transform=''},200)}},50)})});
     }
+    function mwClearDate(){selectedStart=null;selectedEnd=null;mwRenderCal();mwUpdateDateInfo()}
     function mwUpdateDateInfo(){
-      if(selectedStart&&selectedEnd){var days=db(selectedStart,selectedEnd)+1;document.getElementById('mwSelectedRange').textContent=selectedStart+' 至 '+selectedEnd+'（'+days+'天）';var price=cp(selectedCamera,days);document.getElementById('mwPriceDisplay').textContent=price!=null?'¥'+price:'-';document.getElementById('mwNext2').disabled=false}else{document.getElementById('mwSelectedRange').textContent='-';document.getElementById('mwPriceDisplay').textContent='';document.getElementById('mwNext2').disabled=true}
+      if(selectedStart&&selectedEnd){var days=db(selectedStart,selectedEnd)+1;document.getElementById('mwSelectedRange').textContent=selectedStart+' 至 '+selectedEnd+'（'+days+'天）';var price=cp(selectedCamera,days);document.getElementById('mwPriceDisplay').textContent=price!=null?'¥'+price:'-';document.getElementById('mwNext2').disabled=false;document.getElementById('mwClearBtn').style.display=''}else{document.getElementById('mwSelectedRange').textContent='-';document.getElementById('mwPriceDisplay').textContent='';document.getElementById('mwNext2').disabled=true;document.getElementById('mwClearBtn').style.display='none'}
     }
     function mwShowSummary(){
       var days=db(selectedStart,selectedEnd)+1,amount=cp(selectedCamera,days);
@@ -150,8 +151,8 @@
     document.getElementById('mwNextMonth').addEventListener('click',function(){mwMonth++;if(mwMonth>11){mwMonth=0;mwYear++}mwRenderCal()});
         document.getElementById('mwBookingForm').addEventListener('submit',async function(e){e.preventDefault();if(!currentUser){showToast('请先登录','error');return}var name=document.getElementById('mwName').value.trim(),school=document.getElementById('mwSchool').value.trim(),remark=document.getElementById('mwRemark').value.trim();if(!document.getElementById('agreeContract').checked){showToast('请先同意租赁合同协议','error');return}if(!name||!school){showToast('请填写姓名和地址/学校','error');return}if(!selectedStart||!selectedEnd){showToast('请选择预约日期','error');return}var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='提交中...';try{await api('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:selectedCamera.id,startDate:selectedStart,endDate:selectedEnd,name:name,school:school,remark:remark,phone:currentUser.phone})});window.location.href='/success.html'}catch(e2){showToast(e2.message,'error');btn.disabled=false;btn.textContent='提交预约'}});
     mwLoadCameras();
-    // 合同链接：点击在页面内弹窗显示
-    document.addEventListener('click',function(e){var a=e.target.closest('.contract-link');if(!a)return;e.preventDefault();fetch('/api/contract').then(function(r){return r.json()}).then(function(d){if(!d.file){alert('暂无合同文件');return}var ov=document.createElement('div');ov.className='lightbox-overlay';ov.style.zIndex=10001;ov.innerHTML='<iframe src=\"'+d.file+'\" style=\"width:92vw;height:92vh;border:none;background:#fff;border-radius:8px;\"></iframe>';var cl=document.createElement('button');cl.className='lightbox-close';cl.innerHTML='&times;';cl.onclick=function(){ov.remove();document.body.style.overflow=''};ov.appendChild(cl);document.body.appendChild(ov);ov.onclick=function(e2){if(e2.target===ov){ov.remove();document.body.style.overflow=''}};document.body.style.overflow='hidden'}).catch(function(){})});
+    // 合同链接：加载真实文件地址
+    fetch('/api/contract').then(function(r){return r.json()}).then(function(d){if(d.file){var links=document.querySelectorAll('.contract-link');links.forEach(function(a){a.href=d.file;a.removeAttribute('target')})}}).catch(function(){});
   </script>
 </body>
 </html>

@@ -151,6 +151,7 @@ function renderBookingsTable(bookings) {
       '<td>' + b.endDate + '</td>' +
       '<td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(b.remark || '') + '">' + esc(b.remark || '') + '</td>' +
       '<td><input type="number" value="' + (b.amount || 0) + '" style="width:70px;padding:2px 4px;font-size:12px;" onchange="updateAmount(' + b.id + ',this.value)" onclick="this.select()"></td>' +
+      '<td style="font-size:12px;color:var(--gray-dark);">' + fmtDate(b.createdAt) + '</td>' +
       '<td><select onchange="changeStatus(' + b.id + ', this.value)">' + statusOpts + '</select></td>' +
       '<td>' + renewHTML + '</td>' +
       '<td><button class="delete-btn" onclick="deleteBooking(' + b.id + ')">删除</button></td>' +
@@ -161,10 +162,12 @@ function renderBookingsTable(bookings) {
 var STATUS_ORDER = ['pending', 'confirmed', 'renting', 'completed'];
 async function changeStatus(id, newStatus) {
   var b = allBookings.find(function(x) { return x.id === id; });
-  var oldIdx = b ? STATUS_ORDER.indexOf(b.status) : -1, newIdx = STATUS_ORDER.indexOf(newStatus);
+  if (!b) return;
+  var oldStatus = b.status;
+  var oldIdx = STATUS_ORDER.indexOf(oldStatus), newIdx = STATUS_ORDER.indexOf(newStatus);
   if (newIdx >= 0 && oldIdx > newIdx) {
-    var pwd = prompt('🔒 逆向状态变更（' + (b ? b.status : '?') + '→' + newStatus + '），请输入密码：');
-    if (pwd !== '20060419') { alert('密码错误，操作已取消'); return; }
+    var pwd = prompt('🔒 逆向状态变更（' + oldStatus + '→' + newStatus + '），请输入密码：');
+    if (pwd !== '20060419') { loadBookings(document.getElementById('statusFilter').value); return; }
   }
   try {
     await api('/admin/api/bookings/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
@@ -718,6 +721,35 @@ async function changeUserPwd(id){
   await api('/admin/api/users/'+id+'/password',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
   alert('密码已修改');loadUsersList();
 }
+
+// ========== 未读提醒 + 自动刷新 ==========
+var reviewSeen = false;
+function checkPending() {
+  fetch('/admin/api/posts?status=pending').then(function(r){return r.json()}).then(function(posts){
+    var count = posts.length;
+    var badge = document.getElementById('reviewBadge');
+    if (count > 0 && !reviewSeen) {
+      badge.textContent = count;
+      badge.style.display = 'flex';
+    }
+    if (document.getElementById('tab-orders').classList.contains('active')) {
+      loadBookings(document.getElementById('statusFilter').value);
+    }
+  }).catch(function(){});
+}
+checkPending();
+setInterval(checkPending, 8000);
+
+// 点内容审核时清除红圈
+(function() {
+  var reviewBtn = document.querySelector('[data-tab="review"]');
+  if (reviewBtn) {
+    reviewBtn.addEventListener('click', function() {
+      reviewSeen = true;
+      document.getElementById('reviewBadge').style.display = 'none';
+    });
+  }
+})();
 
 // ========== 初始化 ==========
 loadBookings('');
