@@ -668,7 +668,7 @@ body.hero-page{padding-bottom:0}
 @media(max-width:860px){.cam-prices-mobile{display:block;font-size:11px;color:var(--muted);line-height:1.8;padding:4px 0}}
 /* 手机端分步向导 */
 .booking-wizard{display:none}
-@media(max-width:860px){.booking-wizard{display:block}.booking-layout{display:none!important}}
+@media(max-width:860px){.booking-wizard{display:block;padding:0 12px;max-width:600px;margin:0 auto}.booking-layout{display:none!important}}
 .wiz-step{display:none}.wiz-step.active{display:block}
 .camera-list-full{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
 @media(max-width:860px){

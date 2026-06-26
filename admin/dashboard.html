@@ -30,6 +30,7 @@
           </div>
         </div>
         <button class="sidebar-btn" data-tab="privacy">隐私协议</button>
+        <button class="sidebar-btn" data-tab="contract">合同协议</button>
       </div>
       <div class="sidebar-footer">
         <button class="logout-btn" onclick="logout()" style="width:100%;">退出登录</button>
@@ -157,6 +158,15 @@
         <h2 class="tab-heading">隐私协议</h2>
         <div class="form-group"><textarea id="privacyContent" rows="15" style="width:100%;"></textarea></div>
         <button class="btn-primary" onclick="savePrivacy()">保存</button> <span id="privacyMsg" style="color:#16a34a;display:none;">已保存</span>
+      </div>
+      <!-- 合同协议 -->
+      <div id="tab-contract" class="tab-content">
+        <h2 class="tab-heading">合同协议</h2>
+        <p style="font-size:13px;color:var(--gray-dark);margin-bottom:12px;">上传租赁合同文件（Word/PDF），用户预约时需同意后方可提交</p>
+        <div style="margin-bottom:12px;"><input type="file" id="contractFile" accept=".doc,.docx,.pdf,.wps" onchange="document.getElementById('contractFileName').textContent=this.files[0]?this.files[0].name:''"><span id="contractFileName" style="font-size:12px;color:var(--gray-dark);margin-left:8px;"></span></div>
+        <div id="contractCurrent" style="font-size:13px;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;"><button class="btn-primary" onclick="uploadContract()">上传新合同</button><button class="delete-btn" onclick="deleteContract()" id="contractDelBtn" style="display:none;">删除当前合同</button></div>
+        <span id="contractMsg" style="color:#16a34a;margin-left:8px;display:none;">已保存</span>
       </div>
     </main>
   </div>

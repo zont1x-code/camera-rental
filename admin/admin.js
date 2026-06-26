@@ -60,6 +60,7 @@ document.querySelectorAll('.sidebar-btn').forEach(function (btn) {
     if (btn.dataset.tab === 'featured') loadFeatured();
     if (btn.dataset.tab === 'hero') loadHero();
     if (btn.dataset.tab === 'privacy') loadPrivacy();
+    if (btn.dataset.tab === 'contract') loadContract();
   });
 });
 
@@ -459,6 +460,37 @@ async function saveHero() {
 async function loadPrivacy() {
   var data = await api('/admin/api/privacy');
   document.getElementById('privacyContent').value = data.content || '';
+}
+
+async function loadContract() {
+  try {
+    var data = await api('/admin/api/contract');
+    var el = document.getElementById('contractCurrent');
+    if (data.file) {
+      el.innerHTML = '当前合同：<a href="' + data.file + '" target="_blank" style="color:var(--orange);">' + (data.filename || '查看') + '</a>';
+      document.getElementById('contractDelBtn').style.display = '';
+    } else {
+      el.textContent = '尚未上传合同文件';
+      document.getElementById('contractDelBtn').style.display = 'none';
+    }
+  } catch(e) {}
+}
+async function uploadContract() {
+  var file = document.getElementById('contractFile').files[0];
+  if (!file) { alert('请先选择文件'); return; }
+  var fd = new FormData(); fd.append('file', file);
+  try {
+    await fetch('/admin/api/contract', { method: 'PUT', body: fd });
+    document.getElementById('contractFile').value = ''; document.getElementById('contractFileName').textContent = '';
+    var msg = document.getElementById('contractMsg'); msg.style.display = 'inline';
+    setTimeout(function() { msg.style.display = 'none'; }, 2000);
+    loadContract();
+  } catch (e) { alert(e.message); }
+}
+async function deleteContract() {
+  if (!confirm('确定删除当前合同文件？删除后用户无法查看合同。')) return;
+  await fetch('/admin/api/contract', { method: 'DELETE' });
+  loadContract();
 }
 
 async function savePrivacy() {

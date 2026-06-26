@@ -351,6 +351,25 @@ app.delete('/admin/api/announcements/:id', async (req, res) => {
 app.get('/admin/api/privacy', async (req, res) => {
   try { const row = await get('SELECT content FROM privacy WHERE id=1'); res.json(row || { content: '' }); } catch (e) { res.status(500).json({ error: e.message }); }
 });
+app.get('/api/contract', async (req, res) => {
+  try { const row = await get('SELECT * FROM contract WHERE id=1'); res.json(row || {}); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/admin/api/contract', async (req, res) => {
+  try { const row = await get('SELECT * FROM contract WHERE id=1'); res.json(row || {}); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/admin/api/contract', async (req, res) => {
+  try { await run('DELETE FROM contract WHERE id=1'); res.json({ success: true }); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+const docUpload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } });
+app.put('/admin/api/contract', docUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '请选择文件' });
+    const filePath = '/uploads/' + req.file.filename;
+    await run('INSERT INTO contract (id,file,filename,updatedAt) VALUES (1,?,?,NOW()) ON DUPLICATE KEY UPDATE file=?,filename=?,updatedAt=NOW()', [filePath, req.file.originalname, filePath, req.file.originalname]);
+    res.json({ success: true, file: filePath });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.put('/admin/api/privacy', async (req, res) => {
   try {
     const { content } = req.body;
