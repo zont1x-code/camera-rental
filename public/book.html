@@ -54,21 +54,22 @@
   <!-- 手机端分步向导 -->
   <div id="mobileWizard" class="booking-wizard">
     <div id="mwStep1" class="wiz-step active">
-      <h2 style="font-size:18px;font-weight:600;margin-bottom:14px;">选择机型</h2>
+      <h2 class="step-title"><span class="step-num">1</span>选择机型</h2>
       <div id="mwCameraList" class="camera-list-full"></div>
-      <button class="submit-btn" onclick="mwGoStep(2)" disabled id="mwNext1">下一步</button>
     </div>
     <div id="mwStep2" class="wiz-step">
-      <div style="display:flex;gap:10px;margin-bottom:14px;"><button class="btn btn-outline" style="flex:1;padding:10px;text-align:center;" onclick="mwGoStep(1)">上一步</button><button class="btn btn-primary" style="flex:3;padding:10px;" onclick="mwGoStep(3)" disabled id="mwNext2">下一步</button></div>
+      <h2 class="step-title"><span class="step-num">2</span>选择日期</h2>
       <div class="calendar-wrapper">
-        <div class="calendar-header"><button id="mwPrevMonth" class="nav-btn">&lt;</button><span id="mwMonthLabel"></span><button id="mwNextMonth" class="nav-btn">&gt;</button><button id="mwTodayBtn" class="nav-btn" style="width:auto;border-radius:14px;padding:0 12px;font-size:12px;">今天</button></div>
+        <div class="calendar-header"><button id="mwPrevMonth" class="nav-btn">&lt;</button><span id="mwMonthLabel"></span><button id="mwNextMonth" class="nav-btn">&gt;</button></div>
         <div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
         <div id="mwCalendarGrid" class="calendar-grid"></div>
       </div>
       <div class="date-info"><p>已选：<span id="mwSelectedRange">-</span></p><p class="price-display" id="mwPriceDisplay"></p></div>
+      <div class="step-btn-row" style="display:flex;gap:10px;margin-top:14px;"><button class="btn btn-outline" style="flex:1;padding:10px;text-align:center;" onclick="mwGoStep(1)">上一步</button><button class="btn btn-primary" style="flex:3;padding:10px;" onclick="mwGoStep(3)" disabled id="mwNext2">下一步</button></div>
     </div>
     <div id="mwStep3" class="wiz-step">
-      <div id="mwOrderSummary" class="order-summary" style="display:none;"></div>
+      <h2 class="step-title"><span class="step-num">3</span>填写信息</h2>
+      <div id="mwOrderSummary" class="order-summary" style="display:none;"><h4 style="margin-bottom:8px;font-size:14px;color:var(--ink);">订单摘要</h4></div>
       <form id="mwBookingForm">
         <div class="form-group"><label>姓名<span class="required">*</span></label><input type="text" id="mwName" placeholder="请输入姓名" required></div>
         <div class="form-group"><label>地址/学校<span class="required">*</span></label><input type="text" id="mwSchool" placeholder="请输入地址/学校" required></div>
@@ -119,13 +120,12 @@
     async function mwLoadCameras(){
       var cams=await api('/api/cameras');cameras=cams;
       var mlist=document.getElementById('mwCameraList');
-      mlist.innerHTML=cams.map(function(c){return '<div class="camera-card" data-id="'+c.id+'" onclick="mwPick('+c.id+')"><div class="cam-img-wrap"><img src="'+c.image+'" alt="'+c.model+'">'+(c.hot?'<span class="cam-chip">热门</span>':'')+'</div><div class="cam-body"><h3>'+c.model+'</h3><p>'+c.advantage+'</p><p style="font-size:11px;color:var(--muted);">单日¥'+c.price1day+' · 两日¥'+c.price2day+' · 3天¥'+(c.price3dayPerDay||0)+'/天 · 5天¥'+(c.price5dayPerDay||0)+'/天 · 7天¥'+(c.price7day||0)+' · 超7天联系管理员</p></div></div>'}).join('');
+      mlist.innerHTML=cams.map(function(c){return '<div class="camera-card" style="position:relative;"><div class="cam-img-wrap"><img src="'+c.image+'" alt="'+c.model+'">'+(c.hot?'<span class="cam-chip">热门</span>':'')+'</div><div class="cam-body"><h3>'+c.model+'</h3><p>'+c.advantage+'</p><p style="font-size:11px;color:var(--muted);">单日¥'+c.price1day+' · 两日¥'+c.price2day+' · 3天¥'+(c.price3dayPerDay||0)+'/天 · 5天¥'+(c.price5dayPerDay||0)+'/天 · 7天¥'+(c.price7day||0)+' · 超7天联系管理员</p></div><button class="btn btn-primary" style="position:absolute;bottom:8px;right:8px;padding:5px 16px;font-size:12px;" onclick="mwPick('+c.id+',event)">选择</button></div>'}).join('');
     }
-    function mwPick(id){
+    function mwPick(id,e){
+      if(e)e.stopPropagation();
       selectedCamera=cameras.find(function(c){return c.id===id});selectedStart=null;selectedEnd=null;
-      document.querySelectorAll('#mwCameraList .camera-card').forEach(function(c){c.classList.remove('selected')});
-      document.querySelector('#mwCameraList .camera-card[data-id="'+id+'"]').classList.add('selected');
-      document.getElementById('mwNext1').disabled=false;
+      mwGoStep(2);
     }
     async function mwLoadCal(){bookings=await api('/api/bookings?cameraId='+selectedCamera.id)}
     function mwRenderCal(){
@@ -142,12 +142,11 @@
     function mwShowSummary(){
       var days=db(selectedStart,selectedEnd)+1,amount=cp(selectedCamera,days);
       document.getElementById('mwOrderSummary').style.display='block';
-      document.getElementById('mwOrderSummary').innerHTML='<div class="os-row"><span>机型</span><strong>'+selectedCamera.model+'</strong></div><div class="os-row"><span>日期</span><strong>'+selectedStart+' ~ '+selectedEnd+'</strong></div><div class="os-row"><span>天数</span><strong>'+days+'天</strong></div><div class="os-row os-total"><span>金额</span><strong>¥'+(amount!=null?amount:'-')+'</strong></div>';
+      document.getElementById('mwOrderSummary').innerHTML='<h4 style="margin-bottom:8px;font-size:14px;color:var(--ink);">订单摘要</h4><div class="os-row"><span>机型</span><strong>'+selectedCamera.model+'</strong></div><div class="os-row"><span>日期</span><strong>'+selectedStart+' ~ '+selectedEnd+'</strong></div><div class="os-row"><span>天数</span><strong>'+days+'天</strong></div><div class="os-row os-total"><span>金额</span><strong>¥'+(amount!=null?amount:'-')+'</strong></div>';
     }
     document.getElementById('mwPrevMonth').addEventListener('click',function(){mwMonth--;if(mwMonth<0){mwMonth=11;mwYear--}mwRenderCal()});
     document.getElementById('mwNextMonth').addEventListener('click',function(){mwMonth++;if(mwMonth>11){mwMonth=0;mwYear++}mwRenderCal()});
-    document.getElementById('mwTodayBtn').addEventListener('click',function(){var t=new Date();mwMonth=t.getMonth();mwYear=t.getFullYear();mwRenderCal()});
-    document.getElementById('mwBookingForm').addEventListener('submit',async function(e){e.preventDefault();if(!currentUser){showToast('请先登录','error');return}var name=document.getElementById('mwName').value.trim(),school=document.getElementById('mwSchool').value.trim(),remark=document.getElementById('mwRemark').value.trim();if(!name||!school){showToast('请填写姓名和地址/学校','error');return}if(!selectedStart||!selectedEnd){showToast('请选择预约日期','error');return}var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='提交中...';try{await api('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:selectedCamera.id,startDate:selectedStart,endDate:selectedEnd,name:name,school:school,remark:remark,phone:currentUser.phone})});window.location.href='/success.html'}catch(e2){showToast(e2.message,'error');btn.disabled=false;btn.textContent='提交预约'}});
+        document.getElementById('mwBookingForm').addEventListener('submit',async function(e){e.preventDefault();if(!currentUser){showToast('请先登录','error');return}var name=document.getElementById('mwName').value.trim(),school=document.getElementById('mwSchool').value.trim(),remark=document.getElementById('mwRemark').value.trim();if(!name||!school){showToast('请填写姓名和地址/学校','error');return}if(!selectedStart||!selectedEnd){showToast('请选择预约日期','error');return}var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='提交中...';try{await api('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:selectedCamera.id,startDate:selectedStart,endDate:selectedEnd,name:name,school:school,remark:remark,phone:currentUser.phone})});window.location.href='/success.html'}catch(e2){showToast(e2.message,'error');btn.disabled=false;btn.textContent='提交预约'}});
     mwLoadCameras();
     </script>
   </script>

@@ -671,6 +671,15 @@ body.hero-page{padding-bottom:0}
 @media(max-width:860px){.booking-wizard{display:block}.booking-layout{display:none!important}}
 .wiz-step{display:none}.wiz-step.active{display:block}
 .camera-list-full{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+@media(max-width:860px){
+  .booking-wizard .calendar-header{justify-content:center;gap:8px}
+  .booking-wizard .step-btn-row{padding:0 8px}
+  .booking-wizard .calendar-day.selected{background:var(--accent);border-radius:8px}
+  .booking-wizard .calendar-day.range-start{border-radius:8px 0 0 8px}
+  .booking-wizard .calendar-day.range-end{border-radius:0 8px 8px 0}
+  .booking-wizard .calendar-day.range-single{border-radius:8px}
+  .booking-wizard .calendar-day.in-range{background:rgba(0,128,255,.15);border-radius:0}
+}
 .order-summary{background:var(--bg-white);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px}
 .order-summary .os-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--ink2)}
 .order-summary .os-row strong{font-weight:600;color:var(--ink)}
