@@ -249,7 +249,7 @@ body.hero-page{padding-bottom:0}
 .camera-card .cam-body{padding:18px}
 .camera-card .cam-body h3{font-family:var(--font-display);font-size:16px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px;color:var(--ink)}
 .camera-card .cam-body p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px}
-.camera-card .cam-body .cam-price{display:none}
+.camera-card .cam-body .cam-price{font-size:13px;font-weight:600;color:var(--accent-glow)}
 
 /* ====== Calendar ====== */
 .calendar-wrapper{max-width:400px}
@@ -591,11 +591,9 @@ body.hero-page{padding-bottom:0}
   .camera-card .cam-img-wrap{width:120px;min-width:120px;height:auto;flex-shrink:0}
   .camera-card .cam-img-wrap img{height:100%;min-height:120px}
   .camera-card .cam-body{flex:1;padding:12px 14px;display:flex;flex-direction:column;justify-content:center}
-  .camera-card .cam-body .cam-prices-mobile{display:block;font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6}
-.camera-card .cam-body .cam-price{font-size:13px}
-/* 桌面端隐藏手机价格 */
-.cam-prices-mobile{display:none}
-@media(max-width:860px){.cam-prices-mobile{display:block}}
+  @media(max-width:860px){
+  .cam-price.mobile-prices::after{content:attr(data-prices);display:block;font-size:11px;color:var(--muted);margin-top:4px;font-weight:400}
+}
   .card{padding:24px 20px;border-radius:var(--radius-lg);margin-bottom:16px}
   .step-title{font-size:20px;margin-bottom:18px}
   .step-num{width:26px;height:26px;font-size:14px}
@@ -662,3 +660,16 @@ body.hero-page{padding-bottom:0}
   .page-header .logo{font-size:17px}
   .page-header .user-phone{font-size:11px;padding:5px 14px}
 }
+.cam-price{display:none!important}
+.cam-prices-mobile{display:none}
+@media(max-width:860px){.cam-prices-mobile{display:block;font-size:11px;color:var(--muted);line-height:1.8;padding:4px 0}}
+/* 手机端分步向导 */
+.booking-wizard{display:none}
+@media(max-width:860px){.booking-wizard{display:block}.booking-layout{display:none!important}}
+.wiz-step{display:none}.wiz-step.active{display:block}
+.camera-list-full{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.order-summary{background:var(--bg-white);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px}
+.order-summary .os-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--ink2)}
+.order-summary .os-row strong{font-weight:600;color:var(--ink)}
+.order-summary .os-total{border-top:1px solid var(--border-card);margin-top:4px;padding-top:8px;font-size:15px;font-weight:600;color:var(--accent)}
+.order-summary .os-total strong{color:var(--accent);font-size:18px}

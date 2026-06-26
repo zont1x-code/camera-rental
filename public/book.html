@@ -51,6 +51,34 @@
     </div>
   </div>
 
+  <!-- 手机端分步向导 -->
+  <div id="mobileWizard" class="booking-wizard" style="display:none;">
+    <div id="mwStep1" class="wiz-step active">
+      <h2 style="font-size:18px;font-weight:600;margin-bottom:14px;">选择机型</h2>
+      <div id="mwCameraList" class="camera-list-full"></div>
+      <button class="submit-btn" onclick="mwGoStep(2)" disabled id="mwNext1">下一步</button>
+    </div>
+    <div id="mwStep2" class="wiz-step">
+      <div style="display:flex;gap:10px;margin-bottom:14px;"><button class="btn btn-outline" style="flex:1;padding:10px;text-align:center;" onclick="mwGoStep(1)">上一步</button><button class="btn btn-primary" style="flex:3;padding:10px;" onclick="mwGoStep(3)" disabled id="mwNext2">下一步</button></div>
+      <div class="calendar-wrapper">
+        <div class="calendar-header"><button id="mwPrevMonth" class="nav-btn">&lt;</button><span id="mwMonthLabel"></span><button id="mwNextMonth" class="nav-btn">&gt;</button><button id="mwTodayBtn" class="nav-btn" style="width:auto;border-radius:14px;padding:0 12px;font-size:12px;">今天</button></div>
+        <div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div id="mwCalendarGrid" class="calendar-grid"></div>
+      </div>
+      <div class="date-info"><p>已选：<span id="mwSelectedRange">-</span></p><p class="price-display" id="mwPriceDisplay"></p></div>
+    </div>
+    <div id="mwStep3" class="wiz-step">
+      <div id="mwOrderSummary" class="order-summary" style="display:none;"></div>
+      <form id="mwBookingForm">
+        <div class="form-group"><label>姓名<span class="required">*</span></label><input type="text" id="mwName" placeholder="请输入姓名" required></div>
+        <div class="form-group"><label>地址/学校<span class="required">*</span></label><input type="text" id="mwSchool" placeholder="请输入地址/学校" required></div>
+        <div class="form-group"><label>备注</label><textarea id="mwRemark" rows="2" placeholder="选填"></textarea></div>
+        <p class="privacy-note">仅需姓名与地址/学校，无需敏感信息</p>
+        <div style="display:flex;gap:10px;"><button class="btn btn-outline" style="flex:1;padding:10px;text-align:center;" onclick="mwGoStep(2)">上一步</button><button type="submit" class="btn btn-primary" style="flex:3;padding:10px;">提交预约</button></div>
+      </form>
+    </div>
+  </div>
+
   <script src="script.js"></script>
   <script>
     var cameras=[],selectedCamera=null,bookings=[];
@@ -63,7 +91,7 @@
     function ts(){var t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())}
     function cp(camera,days){if(days===1)return camera.price1day;if(days===2)return camera.price2day;if(days===3)return(camera.price3dayPerDay||0)*days;if(days===4)return(camera.price3dayPerDay||0)*days;if(days===5)return(camera.price5dayPerDay||0)*days;if(days===6)return(camera.price5dayPerDay||0)*days;if(days===7)return(camera.price7day||0);return null}
 
-    async function loadCameras(){cameras=await api('/api/cameras');var list=document.getElementById('cameraList');list.innerHTML=cameras.map(function(c,i){var chip=c.hot?'<span class="cam-chip">热门</span>':'';var prices='单日¥'+c.price1day+' | 两日¥'+c.price2day+' | 3天¥'+(c.price3dayPerDay||0)+'/天 | 5天¥'+(c.price5dayPerDay||0)+'/天 | 7天¥'+(c.price7day||0);return '<div class="camera-card" data-id="'+c.id+'"><div class="cam-img-wrap"><img src="'+c.image+'" alt="'+c.model+'">'+chip+'</div><div class="cam-body"><h3>'+c.model+'</h3><p>'+c.advantage+'</p><p class="cam-price" data-full="'+prices.replace(/"/g,'')+'">¥'+c.price1day+'/天起</p><div class="cam-prices-mobile">'+prices+'</div></div></div>'}).join('');list.addEventListener('click',function(e){var card=e.target.closest('.camera-card');if(!card)return;selectCamera(parseInt(card.dataset.id))})}
+    async function loadCameras(){cameras=await api('/api/cameras');var list=document.getElementById('cameraList');list.innerHTML=cameras.map(function(c,i){var chip=c.hot?'<span class="cam-chip">热门</span>':'';var prices='单日¥'+c.price1day+' | 两日¥'+c.price2day+' | 3天¥'+(c.price3dayPerDay||0)+'/天 | 5天¥'+(c.price5dayPerDay||0)+'/天 | 7天¥'+(c.price7day||0);return '<div class="camera-card" data-id="'+c.id+'"><div class="cam-img-wrap"><img src="'+c.image+'" alt="'+c.model+'">'+chip+'</div><div class="cam-body"><h3>'+c.model+'</h3><p>'+c.advantage+'</p><p class="cam-price">¥'+c.price1day+'/天起</p><div class="cam-prices-mobile">'+prices+'</div></div></div>'}).join('');list.addEventListener('click',function(e){var card=e.target.closest('.camera-card');if(!card)return;selectCamera(parseInt(card.dataset.id))})}
     function selectCamera(id){selectedCamera=cameras.find(function(c){return c.id===id});selectedStart=null;selectedEnd=null;document.querySelectorAll('.camera-card').forEach(function(c){c.classList.remove('selected')});document.querySelector('.camera-card[data-id="'+id+'"]').classList.add('selected');updatePricePanel();document.getElementById('step2').style.display='block';document.getElementById('step3').style.display='none';loadBookingsAndRender()}
     function updatePricePanel(){var panel=document.getElementById('pricePanel');if(!selectedCamera){panel.innerHTML='<h3>租赁价格</h3><p class="price-hint">请先选择机型</p>';return}var c=selectedCamera;panel.innerHTML='<h3>'+c.model+'</h3><table class="price-table"><tr><td>单日体验</td><td>¥'+c.price1day+'</td></tr><tr><td>两日套餐</td><td>¥'+c.price2day+'</td></tr><tr><td>三天起租</td><td>¥'+(c.price3dayPerDay||0)+'/天</td></tr><tr><td>五天起租</td><td>¥'+(c.price5dayPerDay||0)+'/天</td></tr><tr><td>七天整周</td><td>¥'+(c.price7day||0)+'</td></tr><tr><td colspan="2" style="font-size:12px;color:var(--accent);">超7天联系管理员</td></tr></table>'}
     async function loadBookingsAndRender(){bookings=await api('/api/bookings?cameraId='+selectedCamera.id);renderCalendar()}
@@ -76,6 +104,52 @@
     document.getElementById('bookingForm').addEventListener('submit',async function(e){e.preventDefault();if(!currentUser){showToast('请先登录','error');return}var name=document.getElementById('name').value.trim(),school=document.getElementById('school').value.trim(),remark=document.getElementById('remark').value.trim();if(!name||!school){showToast('请填写姓名和地址/学校','error');return}if(!selectedStart||!selectedEnd){showToast('请选择预约日期','error');return}var btn=this.querySelector('.submit-btn');btn.disabled=true;btn.textContent='提交中...';try{await api('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:selectedCamera.id,startDate:selectedStart,endDate:selectedEnd,name:name,school:school,remark:remark,phone:currentUser.phone})});window.location.href='/success.html'}catch(e2){showToast(e2.message,'error');btn.disabled=false;btn.textContent='提交预约'}});
     function onLoginSuccess(){}
     initApp('index');loadCameras();
+
+    // ====== 手机端 ======
+    var mwMonth=new Date().getMonth(),mwYear=new Date().getFullYear();
+    function mwGoStep(n){
+      if(n===2&&!selectedCamera){showToast('请先选择机型','error');return}
+      if(n===3&&(!selectedStart||!selectedEnd)){showToast('请先选择日期','error');return}
+      document.querySelectorAll('.wiz-step').forEach(function(s){s.classList.remove('active')});
+      document.getElementById('mwStep'+n).classList.add('active');
+      if(n===2){mwLoadCal();mwRenderCal()}
+      if(n===3){mwShowSummary()}
+      window.scrollTo(0,0);
+    }
+    async function mwLoadCameras(){
+      var cams=await api('/api/cameras');cameras=cams;
+      var mlist=document.getElementById('mwCameraList');
+      mlist.innerHTML=cams.map(function(c){return '<div class="camera-card" data-id="'+c.id+'" onclick="mwPick('+c.id+')"><div class="cam-img-wrap"><img src="'+c.image+'" alt="'+c.model+'">'+(c.hot?'<span class="cam-chip">热门</span>':'')+'</div><div class="cam-body"><h3>'+c.model+'</h3><p>'+c.advantage+'</p><p style="font-size:11px;color:var(--muted);">单日¥'+c.price1day+' · 两日¥'+c.price2day+' · 3天¥'+(c.price3dayPerDay||0)+'/天 · 5天¥'+(c.price5dayPerDay||0)+'/天 · 7天¥'+(c.price7day||0)+' · 超7天联系管理员</p></div></div>'}).join('');
+    }
+    function mwPick(id){
+      selectedCamera=cameras.find(function(c){return c.id===id});selectedStart=null;selectedEnd=null;
+      document.querySelectorAll('#mwCameraList .camera-card').forEach(function(c){c.classList.remove('selected')});
+      document.querySelector('#mwCameraList .camera-card[data-id="'+id+'"]').classList.add('selected');
+      document.getElementById('mwNext1').disabled=false;
+    }
+    async function mwLoadCal(){bookings=await api('/api/bookings?cameraId='+selectedCamera.id)}
+    function mwRenderCal(){
+      var today=ts(),first=new Date(mwYear,mwMonth,1),last=new Date(mwYear,mwMonth+1,0),off=first.getDay(),total=last.getDate();
+      document.getElementById('mwMonthLabel').textContent=mwYear+' 年 '+(mwMonth+1)+' 月';
+      var dd=getDisabledDates(),html='';for(var i=0;i<off;i++)html+='<div class="calendar-day empty"></div>';
+      for(var day=1;day<=total;day++){var dsv=ds(mwYear,mwMonth,day),past=dsv<today,disabled=dd[dsv]||past;var cls='calendar-day';if(disabled)cls+=' disabled';if(dsv===today)cls+=' today';if(selectedStart&&selectedEnd&&dsv>=selectedStart&&dsv<=selectedEnd){cls+=' selected';if(dsv===selectedStart&&dsv===selectedEnd)cls+=' range-single';else if(dsv===selectedStart)cls+=' range-start';else if(dsv===selectedEnd)cls+=' range-end';else cls+=' in-range'}else if(selectedStart&&dsv===selectedStart)cls+=' selected range-single';html+='<div class="'+cls+'" data-date="'+dsv+'">'+day+'</div>'}
+      document.getElementById('mwCalendarGrid').innerHTML=html;
+      document.querySelectorAll('#mwCalendarGrid .calendar-day:not(.disabled):not(.empty)').forEach(function(el){el.addEventListener('click',function(){var dsv=el.dataset.date;if(!selectedStart||(selectedStart&&selectedEnd)){selectedStart=dsv;selectedEnd=null}else{if(dsv<selectedStart){selectedStart=dsv;selectedEnd=null}else{var days=db(selectedStart,dsv)+1;if(days>7){showToast('最多7天','error');return}var dd2=getDisabledDates(),s2=pd(selectedStart),e2=pd(dsv),cur2=new Date(s2);while(cur2<=e2){if(dd2[ds(cur2.getFullYear(),cur2.getMonth(),cur2.getDate())]){showToast('所选区间包含已预约日期','error');return}cur2.setDate(cur2.getDate()+1)}selectedEnd=dsv}}mwRenderCal();mwUpdateDateInfo()})});
+    }
+    function mwUpdateDateInfo(){
+      if(selectedStart&&selectedEnd){var days=db(selectedStart,selectedEnd)+1;document.getElementById('mwSelectedRange').textContent=selectedStart+' 至 '+selectedEnd+'（'+days+'天）';var price=cp(selectedCamera,days);document.getElementById('mwPriceDisplay').textContent=price!=null?'¥'+price:'-';document.getElementById('mwNext2').disabled=false}else{document.getElementById('mwSelectedRange').textContent='-';document.getElementById('mwPriceDisplay').textContent='';document.getElementById('mwNext2').disabled=true}
+    }
+    function mwShowSummary(){
+      var days=db(selectedStart,selectedEnd)+1,amount=cp(selectedCamera,days);
+      document.getElementById('mwOrderSummary').style.display='block';
+      document.getElementById('mwOrderSummary').innerHTML='<div class="os-row"><span>机型</span><strong>'+selectedCamera.model+'</strong></div><div class="os-row"><span>日期</span><strong>'+selectedStart+' ~ '+selectedEnd+'</strong></div><div class="os-row"><span>天数</span><strong>'+days+'天</strong></div><div class="os-row os-total"><span>金额</span><strong>¥'+(amount!=null?amount:'-')+'</strong></div>';
+    }
+    document.getElementById('mwPrevMonth').addEventListener('click',function(){mwMonth--;if(mwMonth<0){mwMonth=11;mwYear--}mwRenderCal()});
+    document.getElementById('mwNextMonth').addEventListener('click',function(){mwMonth++;if(mwMonth>11){mwMonth=0;mwYear++}mwRenderCal()});
+    document.getElementById('mwTodayBtn').addEventListener('click',function(){var t=new Date();mwMonth=t.getMonth();mwYear=t.getFullYear();mwRenderCal()});
+    document.getElementById('mwBookingForm').addEventListener('submit',async function(e){e.preventDefault();if(!currentUser){showToast('请先登录','error');return}var name=document.getElementById('mwName').value.trim(),school=document.getElementById('mwSchool').value.trim(),remark=document.getElementById('mwRemark').value.trim();if(!name||!school){showToast('请填写姓名和地址/学校','error');return}if(!selectedStart||!selectedEnd){showToast('请选择预约日期','error');return}var btn=this.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='提交中...';try{await api('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:selectedCamera.id,startDate:selectedStart,endDate:selectedEnd,name:name,school:school,remark:remark,phone:currentUser.phone})});window.location.href='/success.html'}catch(e2){showToast(e2.message,'error');btn.disabled=false;btn.textContent='提交预约'}});
+    mwLoadCameras();
+    </script>
   </script>
 </body>
 </html>
