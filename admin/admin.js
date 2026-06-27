@@ -108,6 +108,7 @@ async function loadRevenue(type) {
   ry.onchange = function() { loadRevenue(this.value ? 'year' : ''); };
   var rd = document.getElementById('revenueDate');
   rd.value = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  loadRevenue('date');
 })();
 
 function doSearch(){
@@ -466,34 +467,16 @@ async function loadPrivacy() {
 }
 
 async function loadContract() {
-  try {
-    var data = await api('/admin/api/contract');
-    var el = document.getElementById('contractCurrent');
-    if (data.file) {
-      el.innerHTML = '当前合同：<a href="' + data.file + '" target="_blank" style="color:var(--orange);">' + (data.filename || '查看') + '</a>';
-      document.getElementById('contractDelBtn').style.display = '';
-    } else {
-      el.textContent = '尚未上传合同文件';
-      document.getElementById('contractDelBtn').style.display = 'none';
-    }
-  } catch(e) {}
+  var data = await api('/admin/api/contract');
+  document.getElementById('contractContent').value = data.content || '';
 }
-async function uploadContract() {
-  var file = document.getElementById('contractFile').files[0];
-  if (!file) { alert('请先选择文件'); return; }
-  var fd = new FormData(); fd.append('file', file);
+async function saveContract() {
+  var content = document.getElementById('contractContent').value;
   try {
-    await fetch('/admin/api/contract', { method: 'PUT', body: fd });
-    document.getElementById('contractFile').value = ''; document.getElementById('contractFileName').textContent = '';
+    await api('/admin/api/contract', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: content }) });
     var msg = document.getElementById('contractMsg'); msg.style.display = 'inline';
     setTimeout(function() { msg.style.display = 'none'; }, 2000);
-    loadContract();
   } catch (e) { alert(e.message); }
-}
-async function deleteContract() {
-  if (!confirm('确定删除当前合同文件？删除后用户无法查看合同。')) return;
-  await fetch('/admin/api/contract', { method: 'DELETE' });
-  loadContract();
 }
 
 async function savePrivacy() {
@@ -514,6 +497,7 @@ async function savePrivacy() {
 var adminCalYear, adminCalMonth, adminCalBookings = {}, adminCalBlocks = {}, adminCalCameraId = null;
 
 async function loadCalendarTab() {
+  calRangeStart = null;
   var note = localStorage.getItem('calNote');
   if (note) { var el = document.getElementById('calNote'); if (el) { el.value = note; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }
   var sel = document.getElementById('calCameraFilter');
@@ -534,6 +518,7 @@ async function loadCalendarTab() {
 }
 
 async function loadAdminCalendar() {
+  calRangeStart = null;
   try {
     var data = await api('/api/bookings?cameraId=' + adminCalCameraId);
     var blocks = await api('/admin/api/blocks?cameraId=' + adminCalCameraId);
@@ -567,18 +552,26 @@ async function loadAdminCalendar() {
   renderAdminCal();
 }
 
+var calRangeStart = null;
 function calDayClick(e){
   var dsv = this.dataset.date;
   if(!dsv)return;
   if(adminCalBlocks[dsv]){
     var blk=adminCalBlocks[dsv];
     if(confirm('解除 '+dsv+' 的封锁（当前类型：'+(blk.type==='buffer'?'🟢缓冲期':blk.type==='admin'?'🔵管理员预留':'🔴封锁')+'）？')){
-      api('/admin/api/blocks/'+blk.id,{method:'DELETE'}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)});
+      api('/admin/api/blocks/'+blk.id,{method:'DELETE'}).then(function(){loadAdminCalendar();calRangeStart=null}).catch(function(e){alert(e.message)});
     }
   } else if(!adminCalBookings[dsv]){
-    var bt = document.getElementById('calBlockType').value || 'buffer';
-    if(!confirm('封锁 '+dsv+' 一整天？')) return;
-    api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:dsv.slice(0,10),endDate:dsv.slice(0,10),blockType:bt})}).then(function(){loadAdminCalendar()}).catch(function(e){alert(e.message)})
+    if(!calRangeStart){
+      calRangeStart = dsv;
+      document.querySelectorAll('#adminCalGrid .calendar-day').forEach(function(el){el.style.outline=''});
+      this.style.outline = '2px dashed var(--orange)';
+    } else {
+      var sd = calRangeStart, ed = dsv;
+      if(sd > ed){ var tmp=sd; sd=ed; ed=tmp; }
+      var bt = document.getElementById('calBlockType').value || 'buffer';
+      api('/admin/api/blocks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cameraId:adminCalCameraId,startDate:sd,endDate:ed,blockType:bt})}).then(function(){loadAdminCalendar();calRangeStart=null}).catch(function(e){alert(e.message)})
+    }
   }
 }
 
@@ -723,32 +716,22 @@ async function changeUserPwd(id){
 }
 
 // ========== 未读提醒 + 自动刷新 ==========
-var reviewSeen = false;
-function checkPending() {
+(function poll() {
   fetch('/admin/api/posts?status=pending').then(function(r){return r.json()}).then(function(posts){
-    var count = posts.length;
     var badge = document.getElementById('reviewBadge');
-    if (count > 0 && !reviewSeen) {
+    if (!badge) return;
+    var count = posts.length;
+    if (count > 0) {
       badge.textContent = count;
       badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
     }
-    if (document.getElementById('tab-orders').classList.contains('active')) {
+    if (document.getElementById('tab-orders') && document.getElementById('tab-orders').classList.contains('active')) {
       loadBookings(document.getElementById('statusFilter').value);
     }
   }).catch(function(){});
-}
-checkPending();
-setInterval(checkPending, 8000);
-
-// 点内容审核时清除红圈
-(function() {
-  var reviewBtn = document.querySelector('[data-tab="review"]');
-  if (reviewBtn) {
-    reviewBtn.addEventListener('click', function() {
-      reviewSeen = true;
-      document.getElementById('reviewBadge').style.display = 'none';
-    });
-  }
+  setTimeout(poll, 5000);
 })();
 
 // ========== 初始化 ==========

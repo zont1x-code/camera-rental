@@ -429,6 +429,7 @@ body.hero-page{padding-bottom:0}
 }
 .booking-item:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
 .booking-info{flex:1;min-width:180px}
+.booking-info span{white-space:pre-line;font-size:0.8rem;color:var(--muted)}
 .booking-info strong{display:block;font-size:16px;font-weight:600;margin-bottom:4px;color:var(--ink);letter-spacing:-.01em}
 .booking-info span{font-size:13px;color:var(--muted);line-height:1.6}
 .empty-state{
@@ -611,6 +612,7 @@ body.hero-page{padding-bottom:0}
   .post-card .post-img-wrap{height:160px}
   .booking-item{flex-direction:column;align-items:flex-start;gap:14px;padding:18px 20px}
   .booking-info strong{font-size:15px}
+  .bk-line{font-size:0.8rem;color:var(--muted);line-height:1.6}
   .announcement-list li{flex-direction:column;gap:4px;padding:12px 0}
   .page-header{padding:16px 18px 10px}
   .page-header .logo{font-size:18px}
